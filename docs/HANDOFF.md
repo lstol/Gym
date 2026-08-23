@@ -1,7 +1,34 @@
 # Handoff
 
-Session 1, in progress. Phase 0 + 1 scope (docs/SESSION_PLAN.md). Assume the next
-session starts with no memory of this one.
+Session 1, phase 0 + 1 complete. Assume the next session starts with no memory
+of this one.
+
+## Live right now
+
+- **App**: https://treningslogg-794.netlify.app (Netlify site `treningslogg-794`,
+  id `df0356d5-8db0-4957-9778-53450cc2b64b`, team "Holdet"). Custom domain
+  `trening.syndikatet.eu` is set on the Netlify side (`custom_domain` field) but
+  **DNS is not pointed yet** — add a `CNAME` record for `trening` →
+  `treningslogg-794.netlify.app` at whatever provider hosts `syndikatet.eu`
+  (Netlify does not manage that zone — `getDnsZones` came back empty).
+- **Database**: Supabase project "Gym", ref `kwrbykzqukaimvhlieae`, region
+  eu-west-1, Postgres 17. All 8 migrations applied, `security` advisor clean
+  (the one INFO-level finding, `integration_token` has RLS with no policies, is
+  intentional). `seed.sql` and `seed_program.sql` both run — 1 machine,
+  6 stations, 11 exercises, Blokk 1 with 3 templates / 23 items.
+- **Auth**: lasse.stoltenberg@gmail.com signed in once via magic link
+  (`auth.users` row exists), so `seed_program.sql` has already run against the
+  real account — no need to re-run it.
+- **GitHub**: pushed to https://github.com/lstol/Gym (`main`), Netlify site is
+  linked to this checkout's `.netlify` folder for CLI deploys but **not** wired
+  to auto-deploy on push yet — every deploy so far was `netlify deploy --prod`
+  run manually from this machine. Enabling git-based CI/CD means installing the
+  Netlify GitHub App for this repo, which is an OAuth/app-install action for
+  the user to do from the Netlify dashboard (Site configuration → Build & deploy
+  → Link repository), not something to script.
+- `web/.env` exists locally (gitignored) with the real
+  `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`. The same two vars are also set
+  on Netlify (`netlify env:set`, context "all").
 
 ## What shipped
 
@@ -68,14 +95,13 @@ at `calibration_status = 'spec'`, and the 11-exercise catalog with
 `default_station_id`. Safe to run any time — none of it is user-scoped.
 
 `supabase/seed_program.sql`: Blokk 1 (2026-08-23 → 2026-09-26), templates A/B/C
-and all 18 session_template_item rows, transcribed exactly from
-`Inspire_M2_program_og_logg_v2.pdf`. **This one can't run yet** — it looks up
-`auth.users` by email and is a no-op (with a `raise notice`) until that row
-exists. Run it once, after the first magic-link sign-in:
-
-```bash
-supabase db execute -f supabase/seed_program.sql
-```
+and all 23 session_template_item rows, transcribed exactly from
+`Inspire_M2_program_og_logg_v2.pdf`. **Already run** — lasse.stoltenberg@gmail.com
+signed in once, the script found that `auth.users` row, and seeded Blokk 1
+against it (verified: 3 templates, 23 items). It looks up the user by email and
+is a safe no-op otherwise, so it's fine to leave in the repo as-is; don't
+re-run it against this project (it has no `on conflict` guard and would
+duplicate the program).
 
 Decisions made without asking further (flagged, not blocking, per the user's
 "focus on architecture and functionality" steer):
@@ -101,32 +127,32 @@ For layout iteration only, not a source of truth for the real Tailwind build.
 **docs/SESSION_PLAN.md** — one phase per session, phases 0–6, mapped from
 ARCHITECTURE.md §6.
 
-## What's NOT done yet (this session's remaining scope)
+## What's NOT done yet
 
-1. **No live Supabase project.** Migrations have been written and manually
-   reviewed but never executed — no Docker on this machine, so
-   `supabase db reset` couldn't be run locally. Needs either Docker + local
-   Supabase, or connecting to a real hosted project and `supabase db push`.
-   This is an external-resource action (creating/billing a cloud project) —
-   confirm with the user before creating one.
-2. **Not deployed.** `netlify.toml` exists (build `pnpm build`, publish
-   `web/dist`, SPA redirect) but nothing has been pushed to Netlify or pointed
-   at `trening.syndikatet.eu`. Needs the user's Netlify account/site.
-3. **`web/.env` doesn't exist.** `web/.env.example` documents
-   `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`; the app throws on load
-   without them (`src/data/supabaseClient.ts`) — deliberate fail-fast, not a bug.
-4. **`supabase/functions/` doesn't exist yet** — correct for this phase
+1. **DNS for `trening.syndikatet.eu` isn't pointed.** Add a `CNAME` record:
+   `trening` → `treningslogg-794.netlify.app`, at whatever registrar/DNS
+   provider hosts `syndikatet.eu` (not Netlify — confirmed empty via
+   `getDnsZones`). Once that resolves and Netlify issues the cert, the app is
+   reachable at the real domain instead of the `.netlify.app` one.
+2. **No git-based CI/CD.** Every deploy so far was `netlify deploy --prod`,
+   run manually from this machine. To get "push to `main` auto-deploys":
+   Netlify dashboard → this site → Site configuration → Build & deploy →
+   Link repository → authorize the Netlify GitHub App for `lstol/Gym`. That's
+   an OAuth/app-install grant, so it's a for-the-user action, not something to
+   script from here.
+3. **`supabase/functions/` doesn't exist yet** — correct for this phase
    (strava-oauth/strava-sync are phase 4).
+4. **No local Docker/Supabase.** Verification happened directly against the
+   hosted "Gym" project via the Supabase MCP tools, not `supabase db reset`
+   locally — fine for a single hosted project, but there's no fast local
+   iteration loop yet if that's ever wanted.
+
+Phase 1's "done when" is met: signing in at
+https://treningslogg-794.netlify.app shows Blokk 1 and all three session
+templates.
 
 ## Exact next step
 
-Get a Supabase project connected (new project via the user's org, or local
-Docker + `supabase start`), run `supabase db reset` (local) or
-`supabase db push` (hosted) against the migrations above, confirm they apply
-clean, run `supabase/seed.sql`, sign in once via magic link to create the real
-`auth.users` row, then run `supabase/seed_program.sql`. Then wire `web/.env`,
-confirm `pnpm dev` shows Blokk 1 on the home page, and deploy to Netlify /
-`trening.syndikatet.eu`. That closes phase 1's "done when" (CLAUDE.md /
-ARCHITECTURE.md §6: "du kan logge inn og se programmet").
-
-Session 2 after that: logger UI (docs/SESSION_PLAN.md).
+Session 2: logger UI (docs/SESSION_PLAN.md) — pin/station picker, set entry,
+workout draft in `localStorage`, manual backdated entry. Point it at the
+`session_template_item` rows already seeded for Blokk 1.
