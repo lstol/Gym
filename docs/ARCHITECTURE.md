@@ -97,9 +97,10 @@ M2-liste entydig: mid/lav 2:1 = 0,5 · lat/øvre 1:1 = 1,0 · leg ext 1:1 = 1,0 
 seated leg curl 4:3 = 0,75 · beinpress 1:2 = 2,0 · pressarm 2:1.2 = 0,6.
 
 Inspires egen øvelsesplakat bekrefter fem av disse. Den ene som spriker er **pressarmen**:
-plakaten skriver «Weight Ratio 1 to 1.2» = **1,2**, altså dobbelt av M2-listens 0,6. Vi følger
-M2-listen (0,6), men dette er den ene verdien som må måles før den kan stoles på. Ingen av
-kildene er et måleresultat.
+plakaten skriver «Weight Ratio 1 to 1.2» = **1,2**, altså dobbelt av M2-listens 0,6. Plakaten
+gjelder M3, ikke M2, og er forkastet for denne maskinen. Eier bekreftet **0,6** 2026-08-23.
+Saken er lukket; `calibration_status` står fortsatt som `'spec'` fordi 0,6 er avlest fra
+produsentens tall, ikke målt med vekt.
 
 **Derfor:** `set_entry` lagrer *pinnenummer og stasjon*. Effektiv vekt beregnes i en view.
 Faktoren per stasjon ligger som maskinkonfigurasjon med en `calibration_status`.
@@ -114,40 +115,46 @@ datatapet som ikke kan repareres.
 
 ### 3.3 Progresjonsmotoren predikerer repetisjonsfallet
 
-Rev 1 hadde en «ikke foreslå sprang over 10 %»-regel. Den er erstattet, fordi den ikke svarte
-på det brukeren faktisk trenger å vite.
+Rev 1 hadde en «ikke foreslå sprang over 10 %»-regel. Den er erstattet. Reglene som gjelder nå
+står i sin helhet i `docs/PROGRESSION_V2.md`; her er beslutningene bak dem.
 
-Når du går opp én plate, koster det repetisjoner, og hvor mange avhenger helt av stasjonen og
-av hvor du sitter på stacken. Motoren regner
-`predictedReps = currentReps − (steg i prosent) / 2,5`.
+**Progresjonen styres av det laveste arbeidssettet, ikke det tyngste.** Første versjon leste
+toppsettet, og ba derfor om én rep til etter en økt som kollapset (12/9/7 med RIR 0). Det er
+feil råd: lasten er riktig for ett sett og for tung til å gjentas. Jobben er å gjøre settene
+jevne først. Ujevne sett (spredning ≥ 3) holder også lasten.
 
-Mikroplater er utelukket som virkemiddel. Dermed kan motoren **ikke** blokkere et pinnehopp
-som sender deg under `rep_min` — da ville du aldri progresjonert på høypulleyen i det hele
-tatt. Rollen er derfor prognose og rådgivning, ikke portvakt:
+**Kalibrering bruker en talt AMRAP, ikke RIR.** De første øktene lå på RIR 5–10, altså langt
+for lette. Men feilen kan ikke rettes med RIR, fordi RIR er nettopp instrumentet som ikke
+virker ennå — en nybegynner som melder RIR 8 kan ha hatt 12. Derfor ber motoren om ett
+makssett, teller det, og regner lasten ut fra resultatet. Kalibrering evalueres *før* regelen
+om lastøkning, ellers ville 12/12/12 med RIR 10 utløst «opp én pinne» i stedet for «mål dette».
+Øvelser der failure er uklokt (skulder-/brystpress, splittknebøy, hoftehengsel) har
+`amrap_allowed = false` og bruker et RIR-anslag med hardere tak, tydelig merket som anslag.
 
-- Forslaget går alltid gjennom når betingelsen for dobbel progresjon er oppfylt.
-- Predikerte reps vises alltid, så det ikke kommer som en overraskelse at 14 blir 6.
-- Havner prognosen under `rep_min`, gir appen et **intervallråd**: denne øvelsens
-  repetisjonsintervall er for smalt for sin posisjon på stacken, og bør utvides. Rådet vises,
-  men malen skrives aldri om automatisk.
+**Én Epley-modell, ingen lineær konstant.** Rev 2 brukte `PCT_PER_REP = 2,5`. Den er fjernet:
+lastkostnaden per repetisjon er `1 / (k + reps)` — cirka 2,6 % ved 8 reps og 2,0 % ved 20 — og
+programmet spenner hele det båndet, så én verdi er feil i den ene enden uansett. Samme modell
+gjør både prognosen og kalibreringsspranget.
 
-Eksempler:
-- Sittende roing, lavpulley, pinne 12 (30,6 kg): +2,27 kg er 7,4 % → 12 blir omtrent 9.
-  Innenfor 8–12, ingen råd.
-- Nedtrekk, høypulley, pinne 6 (34,0 kg): +4,54 kg er 13,3 % → 12 blir omtrent 7. Forslaget
-  går gjennom, rådet er å utvide til 8–13.
-- Triceps pushdown, høypulley, pinne 2 (15,9 kg): +4,54 kg er 28,6 % → 14 blir omtrent 3.
-  Rådet er cirka 6–16. Dette er verstefallet i programmet, og motoren må håndtere det uten å
-  klemme tallene til noe meningsløst.
+```
+e1rm(kg, reps, k) = kg × (1 + reps / k)
+predictedReps     = round(k × (e1rm(nå) / nyVekt − 1))
+k                 = 30 som standard
+```
 
-Intervallrådene revurderes ved blokkevaluering, ikke midt i en blokk. Etter hvert som pinnen
-klatrer, faller prosentspranget, og intervallene kan snevres inn igjen — det skal appen også
-si fra om.
+`k` kalibreres per øvelse fra observerte pinnebytter (`rep_cost_observation`), median når det
+finnes tre innenfor `[15, 60]`. Det er ikke lenger en gjetning man må huske å revidere — den
+retter seg selv etter hvert som det logges.
 
-**Usikkerhet, sagt tydelig:** 2,5 % per repetisjon er en grov approksimasjon fra RM-tabeller.
-Den varierer mellom øvelser, mellom personer, og treffer dårligere over 12 reps. Den er en
-kalibreringsparameter, ikke en naturlov, og `suggestion_feedback` finnes nettopp for å kunne
-etterprøve den etter to blokker.
+Mikroplater er fortsatt utelukket. Motoren kan derfor **ikke** blokkere et pinnehopp som
+sender deg under `rep_min` — da ville du aldri progresjonert på høypulleyen. Rollen er prognose
+og rådgivning, ikke portvakt: forslaget går gjennom, predikerte reps vises alltid, og
+repetisjonsintervallene er satt per øvelse etter stasjonens steg og leddtoleranse i stedet for
+ett globalt intervall.
+
+**Usikkerhet, sagt tydelig:** Epley er validert best under 10 reps, og kurven varierer mellom
+personer og øvelser. Over 15 reps er anslaget veiledende. UI-en sier «anslagsvis», aldri «du
+klarer».
 
 ### 3.4 Supabase som backend
 

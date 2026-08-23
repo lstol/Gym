@@ -79,8 +79,8 @@ The three questions that used to sit here are answered, and the answers are impl
 - Rep ranges are per exercise, by station step size and joint tolerance. Session C differs
   only by RIR (`rir_min = 3`), not by rep structure.
 
-The one thing still worth a scale: **the press arm factor** (0.6 from the M2 spec vs 1.2
-from Inspire's own chart — a factor of two, on the two press exercises).
+The press arm factor is **settled at 0.6** (owner-confirmed 2026-08-23; the conflicting
+1.2 comes from Inspire's M3 chart, which does not apply to this machine).
 
 ## State of the user's data
 
