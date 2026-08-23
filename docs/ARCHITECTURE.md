@@ -39,7 +39,7 @@ bygge for en skala som aldri kommer.
 ┌────────▼──────────────────────────────────────┐
 │  Supabase                                     │
 │   Postgres  ── RLS på user_id                 │
-│   Auth      ── magic link                     │
+│   Auth      ── e-post + passord               │
 │   Edge Functions: strava-oauth, strava-sync   │
 │   pg_cron   ── sync hver 6. time              │
 └────────┬──────────────────────────────────────┘
@@ -199,7 +199,11 @@ med blokk 1 uten at historikken er overskrevet.
 | Strava refresh token | `integration_token` | eksponert via RLS — tabellen har *ingen* klientpolicy |
 
 RLS på alle brukertabeller fra første migrasjon: `user_id = auth.uid()`. `exercise`, `machine`
-og `station` er offentlig lesbare, ingenting annet. Auth er magic link.
+og `station` er offentlig lesbare, ingenting annet. Auth er e-post + passord —
+byttet fra magic link etter at Supabase sin innebygde e-posttjeneste viste seg
+å ha en lav, udokumentert rate-grense, ikke ment for produksjon. Passordet
+settes direkte i databasen ved førstegangsoppsett (ikke via klienten), med
+tvungent passordbytte ved første innlogging.
 
 `VITE_`-prefikset betyr *offentlig*. Den vanligste sikkerhetsfeilen i Supabase-prosjekter er at
 service role-nøkkelen ender der, og da er RLS irrelevant.
@@ -223,7 +227,7 @@ appen rekker ikke å være klar — så manuell etterregistrering må inn tidlig
 | Fase | Innhold | Ferdig når |
 |---|---|---|
 | **0** | Repo, Vite+TS+Tailwind, Supabase lokalt, CI, Netlify-deploy av tom app | tom app ligger på domenet |
-| **1** | Migrasjoner, RLS, maskin/stasjon-modell, seed med øvelseskatalog og blokk 1, magic link | du kan logge inn og se programmet |
+| **1** | Migrasjoner, RLS, maskin/stasjon-modell, seed med øvelseskatalog og blokk 1, e-post+passord-innlogging | du kan logge inn og se programmet |
 | **2** | Logger-UI med pinnevalg, økt-kladd, **manuell etterregistrering med dato** | papirloggen fra blokk 1 kan tastes inn |
 | **3** | Domenemotor: effektiv vekt, dobbel progresjon, repetisjonsprediksjon, stalling. Full testdekning. Forslag i loggeren. | forslaget er riktig på alle tre stasjonstyper |
 | **4** | Strava OAuth + sync + `perceived_effort`/`heavy_legs` | løpeturer dukker opp av seg selv |
