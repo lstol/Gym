@@ -151,62 +151,75 @@ chart derived from an uncalibrated station.
 Rows with `is_warmup = true` are excluded from every progression calculation, volume chart and
 personal record. New sets default to `is_warmup = false`; marking a warmup is an explicit tap.
 
-### 4.3 Double progression
+### 4.3 Progression rules — see `docs/PROGRESSION_V2.md`
 
-For an exercise in a session template with `target_sets`, `rep_min`, `rep_max`:
+The authoritative specification is **`docs/PROGRESSION_V2.md`**. It supersedes the earlier
+version of this section, which read the *top* set and so told a collapsing session (12/9/7 at
+RIR 0) to add a rep. Summary of what governs now:
 
-```
-last := most recent completed workout of the SAME session template with this exercise
-
-if all prescribed work sets reached rep_max AND every set had rir >= 1:
-    → propose the next pin, with a predicted rep target (see 4.4)
-else if top set reps < rep_max:
-    → same pin, target reps = last top-set reps + 1
-if the same pin has appeared in >= 3 consecutive sessions with no rep increase:
-    → mark `stalled`; propose ~90% and rebuild; surface it in the UI
-```
-
-Never propose an increase in load **and** sets in the same session.
-
-### 4.4 Predict the rep drop — the rule that makes the load model useful
-
-Going up one pin costs repetitions. How many depends entirely on the station and on where you
-sit on the stack — the percentage jump differs by a factor of two between the high pulley and
-the mid pulley, and it shrinks as the pin climbs.
+Evaluate in order, first match wins, over the last session's working sets of the SAME session
+template (warmups **and AMRAP sets** excluded):
 
 ```
-pctIncrease   = stepKg / currentEffectiveKg
-repCost       = (pctIncrease * 100) / PCT_PER_REP        // PCT_PER_REP = 2.5
-predictedReps = round(currentReps - repCost)
+0  no previous session                                   → no_history
+1  exercise uncalibrated (see 4.3a)                      → calibrating / calibration_jump
+2  next pin would exceed 90% of station max              → station_ceiling
+3  minRir == 0 and topReps < rep_max                     → failure_below_target, target topReps
+4  spread (topReps - minReps) >= 3                       → ragged_sets, target topReps
+5  all sets at rep_max, all rir >= 1, sets complete      → progress_load, next pin
+6  all sets at rep_max but minRir == 0                   → consolidate
+7  same pin 3+ sessions with no rise in minReps          → stalled, ~90% and rebuild
+8  otherwise                                             → progress_reps, target minReps + 1
 ```
 
-**The engine forecasts; it does not block.** With no micro-plates available, refusing a pin
-increase would mean never progressing. So:
+**Rule 8 targets the LOWEST working set**, not the highest. When sets are even the two are
+identical, so it does not misfire in the ordinary case. An unknown RIR counts as 0, never as
+readiness. Never propose an increase in load **and** sets in the same session.
 
-- Always propose the pin increase when the double-progression condition in 4.3 is met.
-- **Always show the predicted reps**, so the user is not surprised when 14 becomes 6.
-- If `predictedReps < rep_min`, the pin increase still goes ahead, but the app raises a
-  **range advisory**: this exercise's rep range is too narrow for its position on the stack.
-  Show `suggestedRange = [max(5, rep_max - ceil(repCost)), rep_max]` and let the user widen
-  the template. Do not silently rewrite the template.
+### 4.3a Calibration
 
-Range advisories are re-evaluated at block review, not mid-block. As the working pin climbs,
-`repCost` falls and ranges can be tightened again — surface that too.
+An exercise is uncalibrated until three sessions contain it, or any session had `minRir <= 3`.
+While uncalibrated the engine asks for an **AMRAP** on the last set and sizes the load from
+that counted result — RIR cannot be trusted to calibrate itself, because a novice reporting
+RIR 8 may well have had 12. `exercise.amrap_allowed = false` (shoulder/chest press, split
+squat, hip hinge) falls back to a RIR estimate, capped harder and labelled as an estimate.
 
-Worked examples the tests must cover (`stackKg(pin) = 6.804 + 4.536 * pin`):
-- Seated row, `low_pulley`, pin 12 → 30.6 kg. Step 2.27 kg = 7.4 % → 12 reps becomes ~9.
-  Within an 8–12 range. No advisory.
-- Lat pulldown, `upper_pulley`, pin 6 → 34.0 kg. Step 4.54 kg = 13.3 % → 12 becomes ~7.
-  Proposal goes ahead, advisory suggests 8–13.
-- Triceps pushdown, `upper_pulley`, pin 2 → 15.9 kg. Step 4.54 kg = 28.6 % → 14 becomes ~3.
-  Proposal goes ahead, advisory suggests roughly 6–16. This is the worst case in the
-  programme and the engine must handle it without clamping to nonsense.
+`set_entry.is_amrap` forces `rir = 0` (CHECK constraint) and the set is excluded from every
+rule above — an AMRAP is a measuring instrument, not a working set. It still counts as volume
+and still appears in `v_working_set`.
 
-`PCT_PER_REP` lives in one named place. It is a crude approximation from rep-max tables, it
-varies by exercise and person, and it is least reliable exactly where it is used hardest —
-above 12 reps. Treat it as a **calibration target**: after two blocks, compare predicted
-against actual reps in `suggestion_feedback` and revisit it. The UI says "anslagsvis", never
-"du klarer".
+### 4.4 Predict the rep drop
+
+Going up one pin costs repetitions, and how many depends on the station and on where you sit
+on the stack — 28.6 % on the upper pulley at pin 2, 7.4 % high on the low pulley.
+
+One Epley model does both this forecast and the calibration jump. **There is no
+`PCT_PER_REP`**: the load cost of a rep is `1 / (k + reps)`, which is ~2.6 % at 8 reps and
+~2.0 % at 20 — not a constant, and this programme spans that whole band.
+
+```
+e1rm(kg, reps, k)                 = kg * (1 + reps / k)
+predictedReps(cur, reps, new, k)  = round(k * (e1rm(cur, reps, k) / new - 1))
+EPLEY_K_DEFAULT                   = 30
+```
+
+`k` is calibrated per exercise from observed pin changes (`rep_cost_observation`): the closed
+form `k = (to_kg*to_reps - from_kg*from_reps) / (from_kg - to_kg)`, kept only when it lands in
+`[15, 60]`, median once there are three. Settings shows the value, the count, and whether it
+is still the default.
+
+**The engine forecasts; it does not block.** With no micro-plates, refusing a pin increase
+would mean never progressing. Always show the predicted reps so 14 becoming 6 is not a
+surprise. The UI says "anslagsvis", never "du klarer".
+
+Worked examples the tests must cover (`stackKg(pin) = 6.804 + 4.536 * pin`, k = 30):
+- Seated row, `low_pulley`, pin 12 → 13: e1RM 42.865 → **9 reps**.
+- Lat pulldown, `upper_pulley`, pin 6 → 7: e1RM 47.628 → **7 reps**.
+- Triceps pushdown, `upper_pulley`, pin 2 → 3 at 14 reps: e1RM 23.285 → **4 reps**.
+
+Rep ranges are per exercise, set by the station's step size and joint tolerance, not one
+global range — see `docs/PROGRESSION_V2.md` §5. Range advisories are re-evaluated at block
+review, never mid-block, and never rewrite the template automatically.
 
 ### 4.5 Unilateral exercises
 `exercise.is_unilateral = true` → sets are logged per side (`side: 'L' | 'R'`). Progression

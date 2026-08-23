@@ -38,6 +38,14 @@ export const nb = {
   settings: {
     title: 'Innstillinger',
     buildHash: 'Byggversjon',
+    repCostTitle: 'Repetisjonskostnad (k)',
+    repCostHelp:
+      'Hvor fort repetisjonene faller når vekten øker. Lav k betyr at de faller raskt. Appen bruker 30 til den har tre målinger fra dine egne økter.',
+    repCostCaveat: 'Anslaget er grovere jo høyere repetisjoner.',
+    repCostEmpty: 'Ingen målinger ennå. De kommer når du bytter pinne mellom to økter.',
+    observation: 'måling',
+    observations: 'målinger',
+    usingDefault: 'bruker standard',
   },
   logger: {
     loading: 'Laster …',
@@ -66,19 +74,29 @@ export const nb = {
     logHint: 'Fyll inn reps og RIR — lagres automatisk.',
     lastTime: 'Sist',
     confirm: 'Bekreft sett',
+    amrapMark: 'Merk som makssett (AMRAP)',
+    amrapShort: 'MAX',
+    amrapOn: 'AMRAP',
   },
   suggestion: {
     title: 'Anbefaling',
     apply: 'Bruk',
-    reps: 'reps',
-    // "anslagsvis", never "du klarer" — CLAUDE.md §4.4
-    estimated: 'anslagsvis',
     basedOn: 'Basert på økten',
-    stalled: 'Stagnert — legg ned og bygg opp igjen',
-    atStackMax: 'Toppen av vektstabelen. Bytt øvelse eller variant.',
-    rangeAdvisory:
-      'Intervallet er smalt for denne posisjonen på stabelen. Vurder {min}–{max} reps.',
-    ceiling: 'Nær taket for stasjonen — svaret er en annen øvelse, ikke en plate til.',
+    // "anslagsvis", never "du klarer" — CLAUDE.md §4.4
+    progressLoad: 'Opp til pinne {pin} ({kg} kg). Anslagsvis {predictedReps} reps.',
+    progressReps: 'Samme pinne. Mål: {reps} reps på alle sett.',
+    failureBelowTarget:
+      'Samme pinne. Du gikk til utmattelse på alle sett — mål å ta {reps} på alle tre før du øker.',
+    raggedSets: 'Ujevne sett ({reps}). Samme pinne til alle tre er like.',
+    consolidate: 'Samme pinne — siste sett gikk til utmattelse.',
+    stalled: 'Stått stille i {n} økter. Ned til pinne {pin} og bygg opp igjen.',
+    stationCeiling: 'Nær maks for denne stasjonen ({kg} av {max} kg). Bytt øvelse i stedet.',
+    calibrating:
+      'Kalibrering: samme pinne. Ta siste sett så langt du kommer med god teknikk og noter antall. Da regner appen ut riktig last.',
+    calibrationJump: 'Kalibrering: opp til pinne {pin} ({kg} kg).',
+    rirEstimate: 'Anslag basert på RIR — mindre presist enn en AMRAP.',
+    jumpSplit: 'Stort sprang — appen tar det over to økter.',
+    calibrated: 'Kalibrert. Fra nå gjelder vanlig progresjon.',
   },
   calendar: {
     title: 'Kalender',

@@ -33,6 +33,7 @@ export type SaveSetEntryInput = {
   rir: number | null
   side: 'L' | 'R' | null
   is_warmup: boolean
+  is_amrap: boolean
 }
 
 async function saveSetEntry(input: SaveSetEntryInput): Promise<SetEntry> {

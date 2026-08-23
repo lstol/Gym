@@ -32,6 +32,7 @@ export type Exercise = {
   is_unilateral: boolean
   default_station_id: string | null
   load_source: LoadSource
+  amrap_allowed: boolean
   station?: Station | null
 }
 
@@ -110,4 +111,5 @@ export type SetEntry = {
   rir: number | null
   side: Side | null
   is_warmup: boolean
+  is_amrap: boolean
 }

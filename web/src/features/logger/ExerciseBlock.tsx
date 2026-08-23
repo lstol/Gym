@@ -69,6 +69,7 @@ export function ExerciseBlock({
         {suggestion && (
           <SuggestionBanner
             suggestion={suggestion}
+            stationMaxKg={station?.max_effective_kg ?? null}
             onApply={(nextPin) => {
               if (nextPin !== null) setPin(nextPin)
             }}
@@ -164,6 +165,7 @@ export function ExerciseBlock({
                 sideLabel={side ?? undefined}
                 existing={existingSets.find((s) => s.set_index === setIndex && s.side === side)}
                 suggested={last?.bySetIndex.get(setIndex)}
+                offerAmrap={suggestion?.requestAmrap === true && setIndex === totalSets}
                 pin={exercise.load_source === 'stack' ? pin : null}
                 externalKg={exercise.load_source === 'external' ? externalKg : null}
               />

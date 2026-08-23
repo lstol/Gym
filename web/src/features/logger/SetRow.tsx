@@ -13,6 +13,8 @@ type SetRowProps = {
   existing: SetEntry | undefined
   /** What was done for this set index last session, if anything. */
   suggested?: { reps: number; rir: number | null }
+  /** Offer the AMRAP toggle — only the last set, only when calibration asked. */
+  offerAmrap?: boolean
   pin: number | null
   externalKg: number | null
 }
@@ -28,6 +30,7 @@ export function SetRow({
   sideLabel,
   existing,
   suggested,
+  offerAmrap,
   pin,
   externalKg,
 }: SetRowProps) {
@@ -41,6 +44,7 @@ export function SetRow({
     existing?.rir?.toString() ?? suggested?.rir?.toString() ?? '',
   )
   const [saved, setSaved] = useState(!!existing)
+  const [isAmrap, setIsAmrap] = useState(existing?.is_amrap ?? false)
   const saveSetEntry = useSaveSetEntry(workoutId)
 
   // Values carried over from last session are a starting point, not a record —
@@ -61,9 +65,10 @@ export function SetRow({
         pin,
         external_kg: externalKg,
         reps: Number(reps),
-        rir: rir === '' ? null : Number(rir),
+        rir: isAmrap ? 0 : rir === '' ? null : Number(rir),
         side,
         is_warmup: false,
+        is_amrap: isAmrap,
       },
       { onSuccess: () => setSaved(true) },
     )
@@ -74,7 +79,7 @@ export function SetRow({
     const handle = setTimeout(save, AUTOSAVE_DELAY_MS)
     return () => clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reps, rir, pin, externalKg])
+  }, [reps, rir, pin, externalKg, isAmrap])
 
   function onEdit(setter: (v: string) => void, value: string) {
     dirty.current = true
@@ -99,17 +104,47 @@ export function SetRow({
         onChange={(e) => onEdit(setReps, e.target.value)}
         className={`tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none ${inputTone}`}
       />
-      <input
-        type="text"
-        inputMode="numeric"
-        aria-label={`${nb.logger.rir} ${setIndex}`}
-        placeholder="–"
-        value={rir}
-        onChange={(e) => onEdit(setRir, e.target.value)}
-        className={`tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none ${inputTone}`}
-      />
+      {/* An AMRAP has no reps in reserve by definition, so the RIR control is
+          replaced rather than left to be filled in with something meaningless. */}
+      {isAmrap ? (
+        <button
+          type="button"
+          onClick={() => {
+            dirty.current = true
+            setSaved(false)
+            setIsAmrap(false)
+          }}
+          className="h-11 w-full rounded-lg border border-brand bg-brand-soft text-xs font-bold text-brand-dark"
+        >
+          {nb.logger.amrapOn}
+        </button>
+      ) : (
+        <input
+          type="text"
+          inputMode="numeric"
+          aria-label={`${nb.logger.rir} ${setIndex}`}
+          placeholder="–"
+          value={rir}
+          onChange={(e) => onEdit(setRir, e.target.value)}
+          className={`tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none ${inputTone}`}
+        />
+      )}
 
-      {saved ? (
+      {offerAmrap && !isAmrap && !saved ? (
+        <button
+          type="button"
+          onClick={() => {
+            dirty.current = true
+            setSaved(false)
+            setIsAmrap(true)
+          }}
+          aria-label={nb.logger.amrapMark}
+          title={nb.logger.amrapMark}
+          className="h-8 w-8 rounded-lg border border-brand text-[10px] font-bold text-brand"
+        >
+          {nb.logger.amrapShort}
+        </button>
+      ) : saved ? (
         <span className="text-center text-sm text-done" aria-label={nb.logger.saved}>
           ✓
         </span>

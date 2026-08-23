@@ -6,6 +6,7 @@ import { useSessionTemplate } from '../../data/queries/sessionTemplate'
 import { useSetEntries } from '../../data/queries/setEntry'
 import { useLastSets } from '../../data/queries/lastSets'
 import { useSuggestions } from '../../data/queries/suggestions'
+import { useRecordObservations } from '../../data/queries/repCostObservation'
 import { ExerciseBlock } from './ExerciseBlock'
 
 export function LoggerPage() {
@@ -16,6 +17,7 @@ export function LoggerPage() {
   const { data: template, isLoading: templateLoading } = useSessionTemplate(workout?.template_id)
   const { data: setEntries } = useSetEntries(workoutId)
   const setWorkoutStatus = useSetWorkoutStatus()
+  const recordObservations = useRecordObservations()
 
   const exerciseIds = useMemo(
     () => (template?.items ?? []).map((i) => i.exercise_id),
@@ -86,6 +88,16 @@ export function LoggerPage() {
           type="button"
           onClick={async () => {
             await setWorkoutStatus.mutateAsync({ workoutId: workout.id, status: 'completed' })
+            // Finishing a session may have produced a pin change worth learning
+            // this exercise's Epley k from. Idempotent, and never blocks exit.
+            try {
+              await recordObservations.mutateAsync({
+                templateId: workout.template_id,
+                items: template.items,
+              })
+            } catch {
+              // Calibration data is a nicety; losing it must not strand the user.
+            }
             navigate('/')
           }}
           className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white"

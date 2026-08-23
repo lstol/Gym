@@ -45,7 +45,7 @@ no memory of this one.
 - **Progress charts**: reps as bars (right axis), effective kg as a stepped line
   (left axis), so double progression is visible as a sawtooth.
 
-## Domain layer — pure, test-first, 40 tests
+## Domain layer — pure, test-first, 68 tests
 
 `web/src/domain/`, no imports from `data/` or `features/` (ESLint-enforced).
 
@@ -53,36 +53,41 @@ no memory of this one.
   is asserted.
 - `schedule.ts` — calendar-date arithmetic that never routes through a UTC
   instant, tested across month, year and the late-October CET/CEST change.
-- `progression.ts` — the engine. `PCT_PER_REP = 2.5` in one named place. All
-  three worked examples from CLAUDE.md §4.4 are covered, plus: RIR 0 or unknown
-  is not readiness, warmups ignored, load and sets never both move, stalling
-  after 3 flat sessions proposes ~90 %, unilateral follows the weaker side, the
-  stack top is not exceeded, station ceilings flag at 90 %.
+- `progression.ts` — the engine, rules v2. Ordered predicate list returning a
+  tagged `reason`; Epley model (`e1rm`, `predictedRepsAt`, `fitEpleyK`,
+  `epleyKFrom`, `observationsFrom`). Covers every case in PROGRESSION_V2 §7,
+  including the three worked examples, AMRAP exclusion, calibration jumps and
+  their caps, RIR 0/null never counting as readiness, and stalling.
 
 Suggestions are proposals only — "Bruk" pre-sets the pin control and writes
 nothing.
 
-## Open questions for the user — do not resolve these unilaterally
+## Progression rules v2 — implemented
 
-1. **RIR 0 below the rep target.** The user's shoulder press was 12/9/7 at RIR 0
-   throughout. Rule 2 says "top set + 1", so the engine recommends 13 reps, which
-   is too aggressive. CLAUDE.md has no clause for "below rep_max but already at
-   failure". The user is discussing this with Claude separately —
-   see `docs/CONTEXT_PROMPT.md`. Wait for their decision.
-2. **Press arm factor.** The M2 spec says 2:1.2 → **0.6** (what's seeded).
-   Inspire's own exercise chart prints "1 to 1.2" → **1.2**. Every other station
-   agrees between the two sources; only this one differs, by a factor of two. It
-   is recorded in the station's `note` and in both spec docs. Recommend measuring
-   with a scale and setting `calibration_status = 'measured'`. Because kg is
-   computed, correcting it later recomputes all history.
-3. **First-session loads look far too light** — several exercises logged at
-   RIR 5–10. "Add one rep" may be the wrong response to a badly calibrated
-   starting load. Part of the same discussion.
+The three questions that used to sit here are answered, and the answers are implemented.
+`docs/PROGRESSION_V2.md` is the authoritative spec; CLAUDE.md §4.3–4.4 summarises it.
+
+- Progression targets the **lowest** working set, not the top one, and ragged sets
+  (spread >= 3) or failure below the rep target hold the load instead of adding a rep.
+- Loads that are far too light are fixed by **calibration**, driven by a counted AMRAP
+  rather than by RIR — RIR is the instrument that is broken in a novice. `amrap_allowed`
+  is false for shoulder/chest press, split squat and hip hinge; those use a capped RIR
+  estimate labelled as such.
+- `PCT_PER_REP` is **gone**. One Epley model does the forecast and the calibration jump;
+  `k` defaults to 30 and calibrates per exercise from observed pin changes
+  (`rep_cost_observation`, median once three land in [15, 60]). Settings shows it.
+- Rep ranges are per exercise, by station step size and joint tolerance. Session C differs
+  only by RIR (`rir_min = 3`), not by rep structure.
+
+The one thing still worth a scale: **the press arm factor** (0.6 from the M2 spec vs 1.2
+from Inspire's own chart — a factor of two, on the two press exercises).
 
 ## State of the user's data
 
 One logged session: **session C, 2026-08-23**, 21 sets across 7 exercises.
-Planned sessions run through 2026-09-30.
+Planned sessions run through 2026-09-30. Rep ranges were reseeded by the
+progression-v2 migration, so the ranges on that session's template now differ
+from what was in force when it was logged.
 
 This matters for expectations: **recommendations and progress charts are
 invisible with a single session.** A recommendation needs a previous session of

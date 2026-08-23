@@ -1,8 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '../supabaseClient'
-import { suggestNext } from '../../domain/progression'
+import { suggestNext, epleyKFrom } from '../../domain/progression'
 import type { SessionPerformance, Suggestion } from '../../domain/progression'
 import type { SessionTemplateItem } from '../types'
+import { PLATE_KG } from '../../domain/load'
 
 type Row = {
   exercise_id: string
@@ -13,17 +14,17 @@ type Row = {
   rir: number | null
   side: 'L' | 'R' | null
   is_warmup: boolean
+  is_amrap: boolean
   workout: { date: string; status: string } | null
 }
 
 /**
  * History for the progression engine, scoped to the SAME session template —
- * CLAUDE.md §4.3 compares like with like, so session B's nedtrekk does not
- * drive session A's.
+ * session B's nedtrekk must not drive session A's.
  *
- * Skipped sessions are excluded. Anything else that has logged sets counts as
- * performed: requiring status = 'completed' would silently drop a session
- * where the user logged their sets but never tapped "Avslutt økt".
+ * Skipped sessions are excluded. Anything else with logged sets counts as
+ * performed: requiring status = 'completed' would silently drop a session where
+ * the sets were logged but "Avslutt økt" was never tapped.
  */
 async function fetchHistory(
   templateId: string,
@@ -35,7 +36,7 @@ async function fetchHistory(
   const { data, error } = await supabase
     .from('set_entry')
     .select(
-      'exercise_id, set_index, pin, external_kg, reps, rir, side, is_warmup, workout:workout_id!inner(date, status, template_id)',
+      'exercise_id, set_index, pin, external_kg, reps, rir, side, is_warmup, is_amrap, workout:workout_id!inner(date, status, template_id)',
     )
     .in('exercise_id', exerciseIds)
     .eq('workout.template_id', templateId)
@@ -60,16 +61,35 @@ async function fetchHistory(
       externalKg: row.external_kg,
       side: row.side,
       isWarmup: row.is_warmup,
+      isAmrap: row.is_amrap,
     })
   }
 
   const out = new Map<string, SessionPerformance[]>()
   for (const [exerciseId, sessions] of byExercise) {
-    out.set(
-      exerciseId,
-      [...sessions.values()].sort((a, b) => (a.date < b.date ? -1 : 1)),
-    )
+    out.set(exerciseId, [...sessions.values()].sort((a, b) => (a.date < b.date ? -1 : 1)))
   }
+  return out
+}
+
+/** Observed Epley k per exercise, for exercises with enough observations. */
+async function fetchEpleyK(exerciseIds: string[]): Promise<Map<string, number>> {
+  if (exerciseIds.length === 0) return new Map()
+  const { data, error } = await supabase
+    .from('rep_cost_observation')
+    .select('exercise_id, epley_k')
+    .in('exercise_id', exerciseIds)
+
+  if (error) throw error
+
+  const byExercise = new Map<string, number[]>()
+  for (const row of (data ?? []) as { exercise_id: string; epley_k: number }[]) {
+    if (!byExercise.has(row.exercise_id)) byExercise.set(row.exercise_id, [])
+    byExercise.get(row.exercise_id)?.push(Number(row.epley_k))
+  }
+
+  const out = new Map<string, number>()
+  for (const [exerciseId, values] of byExercise) out.set(exerciseId, epleyKFrom(values))
   return out
 }
 
@@ -85,7 +105,11 @@ export function useSuggestions(
     queryKey: ['suggestions', templateId, key, beforeDate],
     enabled: !!templateId && !!beforeDate && exerciseIds.length > 0,
     queryFn: async (): Promise<Map<string, Suggestion>> => {
-      const history = await fetchHistory(templateId as string, exerciseIds, beforeDate as string)
+      const [history, epleyKs] = await Promise.all([
+        fetchHistory(templateId as string, exerciseIds, beforeDate as string),
+        fetchEpleyK(exerciseIds),
+      ])
+
       const out = new Map<string, Suggestion>()
       for (const item of items) {
         const exercise = item.exercise
@@ -96,11 +120,15 @@ export function useSuggestions(
             history: history.get(item.exercise_id) ?? [],
             repMin: item.rep_min,
             repMax: item.rep_max,
+            rirMin: item.rir_min,
             targetSets: item.target_sets,
             loadSource: exercise.load_source,
             stationFactor: exercise.station?.factor ?? null,
             stationMaxEffectiveKg: exercise.station?.max_effective_kg ?? null,
+            plateKg: exercise.station?.machine?.plate_kg ?? PLATE_KG,
             isUnilateral: exercise.is_unilateral,
+            amrapAllowed: exercise.amrap_allowed,
+            epleyK: epleyKs.get(item.exercise_id) ?? 30,
           }),
         )
       }
