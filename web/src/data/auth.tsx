@@ -6,6 +6,7 @@ type AuthState = {
   session: Session | null
   loading: boolean
   sendMagicLink: (email: string) => Promise<{ error: string | null }>
+  verifyCode: (email: string, token: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -31,12 +32,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
+  async function verifyCode(email: string, token: string) {
+    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+    return { error: error?.message ?? null }
+  }
+
   async function signOut() {
     await supabase.auth.signOut()
   }
 
   return (
-    <AuthContext.Provider value={{ session, loading, sendMagicLink, signOut }}>
+    <AuthContext.Provider value={{ session, loading, sendMagicLink, verifyCode, signOut }}>
       {children}
     </AuthContext.Provider>
   )

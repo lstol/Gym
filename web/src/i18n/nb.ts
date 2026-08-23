@@ -6,7 +6,10 @@ export const nb = {
     emailLabel: 'E-post',
     emailPlaceholder: 'du@eksempel.no',
     sendLink: 'Send innloggingslenke',
-    linkSent: 'Sjekk e-posten din for innloggingslenke.',
+    linkSent: 'Sjekk e-posten din. Klikk lenken, eller skriv inn 6-sifret kode under.',
+    codeLabel: 'Engangskode',
+    codePlaceholder: '123456',
+    verifyCode: 'Logg inn med kode',
     signOut: 'Logg ut',
   },
   nav: {
