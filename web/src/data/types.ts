@@ -3,6 +3,14 @@
 
 export type CalibrationStatus = 'spec' | 'measured'
 
+export type Machine = {
+  id: string
+  name: string
+  plate_kg: number
+  top_plate_kg: number
+  plate_count: number
+}
+
 export type Station = {
   id: string
   machine_id: string
@@ -11,6 +19,7 @@ export type Station = {
   max_effective_kg: number
   calibration_status: CalibrationStatus
   note: string | null
+  machine?: Machine
 }
 
 export type LoadSource = 'stack' | 'bodyweight' | 'external'
@@ -23,6 +32,7 @@ export type Exercise = {
   is_unilateral: boolean
   default_station_id: string | null
   load_source: LoadSource
+  station?: Station | null
 }
 
 export type ProgramStatus = 'planned' | 'active' | 'completed'
@@ -66,4 +76,35 @@ export type SessionTemplateWithItems = SessionTemplate & {
 
 export type ProgramWithTemplates = Program & {
   session_templates: SessionTemplateWithItems[]
+}
+
+export type WorkoutStatus = 'planned' | 'completed' | 'skipped'
+
+export type Workout = {
+  id: string
+  program_id: string
+  template_id: string
+  date: string
+  status: WorkoutStatus
+  duration_min: number | null
+  sleep_1_5: number | null
+  energy_1_5: number | null
+  post_1_5: number | null
+  notes: string | null
+}
+
+export type Side = 'L' | 'R'
+
+export type SetEntry = {
+  id: string
+  workout_id: string
+  exercise_id: string
+  station_id: string | null
+  set_index: number
+  pin: number | null
+  external_kg: number | null
+  reps: number
+  rir: number | null
+  side: Side | null
+  is_warmup: boolean
 }

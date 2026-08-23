@@ -10,3 +10,15 @@ if (!url || !anonKey) {
 }
 
 export const supabase = createClient(url, anonKey)
+
+// Every insert into a user-owned table must set user_id explicitly — RLS's
+// `with check (user_id = auth.uid())` rejects a row that omits it (there is
+// no DEFAULT on that column). This reads the already-cached session, so it
+// doesn't cost a network round trip.
+export async function getCurrentUserId(): Promise<string> {
+  const { data, error } = await supabase.auth.getSession()
+  if (error) throw error
+  const userId = data.session?.user.id
+  if (!userId) throw new Error('No authenticated user')
+  return userId
+}

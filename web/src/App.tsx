@@ -8,6 +8,7 @@ import { SignupPage } from './ui/SignupPage'
 import { ChangePasswordPage } from './ui/ChangePasswordPage'
 import { HomePage } from './features/progress/HomePage'
 import { SettingsPage } from './features/settings/SettingsPage'
+import { LoggerPage } from './features/logger/LoggerPage'
 
 const queryClient = new QueryClient()
 
@@ -23,6 +24,7 @@ export function App() {
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<HomePage />} />
+              <Route path="/logger" element={<LoggerPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
             </Route>
