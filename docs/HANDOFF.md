@@ -6,11 +6,17 @@ of this one.
 ## Live right now
 
 - **App**: https://treningslogg-794.netlify.app (Netlify site `treningslogg-794`,
-  id `df0356d5-8db0-4957-9778-53450cc2b64b`, team "Holdet"). Custom domain
-  `trening.syndikatet.eu` is set on the Netlify side (`custom_domain` field) but
-  **DNS is not pointed yet** — add a `CNAME` record for `trening` →
-  `treningslogg-794.netlify.app` at whatever provider hosts `syndikatet.eu`
-  (Netlify does not manage that zone — `getDnsZones` came back empty).
+  id `df0356d5-8db0-4957-9778-53450cc2b64b`, team "Holdet"). Domain is
+  **`gym.syndikatet.eu`**, not `trening.syndikatet.eu` as CLAUDE.md's header
+  says — the user changed it; CLAUDE.md wasn't updated to match (flag this,
+  don't silently "fix" the doc). DNS CNAME is correctly pointed. Netlify's
+  `custom_domain` field was still `trening.syndikatet.eu` when checked
+  (2026-08-23) — corrected to `gym.syndikatet.eu` and TLS provisioning
+  triggered via `provisionSiteTLSCertificate`, but `ssl: false` as of this
+  writing; cert issuance is async and can take a few minutes to a couple
+  hours. If `https://gym.syndikatet.eu` still shows a `*.netlify.app`
+  certificate mismatch next session, check `getSite` → `ssl`/`ssl_status`
+  before assuming something's broken.
 - **Database**: Supabase project "Gym", ref `kwrbykzqukaimvhlieae`, region
   eu-west-1, Postgres 17. All 8 migrations applied, `security` advisor clean
   (the one INFO-level finding, `integration_token` has RLS with no policies, is
@@ -19,13 +25,17 @@ of this one.
 - **Auth**: lasse.stoltenberg@gmail.com signed in once via magic link
   (`auth.users` row exists), so `seed_program.sql` has already run against the
   real account — no need to re-run it.
-- **GitHub**: pushed to https://github.com/lstol/Gym (`main`), Netlify site is
-  linked to this checkout's `.netlify` folder for CLI deploys but **not** wired
-  to auto-deploy on push yet — every deploy so far was `netlify deploy --prod`
-  run manually from this machine. Enabling git-based CI/CD means installing the
-  Netlify GitHub App for this repo, which is an OAuth/app-install action for
-  the user to do from the Netlify dashboard (Site configuration → Build & deploy
-  → Link repository), not something to script.
+- **GitHub**: pushed to https://github.com/lstol/Gym (`main`). Auto-deploy on
+  push is **still not actually wired**, despite `build_settings` on the
+  Netlify site now showing `repo_url`/`repo_branch`/`cmd`/`dir` (I set that via
+  `updateSite` to test). That call only writes metadata — `installation_id`
+  and `deploy_key_id` both came back `null`, and `gh api repos/lstol/Gym/hooks`
+  returns `[]`: no webhook exists on the GitHub side, so a push will not
+  trigger a build. The actual link requires installing the Netlify GitHub App
+  on this repo, which is an OAuth/app-install grant only the user can make —
+  Netlify dashboard → this site → Site configuration → Build & deploy →
+  Continuous deployment → Link site to Git repository. Until that's done,
+  every deploy is `netlify deploy --prod` run manually from this machine.
 - `web/.env` exists locally (gitignored) with the real
   `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`. The same two vars are also set
   on Netlify (`netlify env:set`, context "all").
@@ -129,17 +139,13 @@ ARCHITECTURE.md §6.
 
 ## What's NOT done yet
 
-1. **DNS for `trening.syndikatet.eu` isn't pointed.** Add a `CNAME` record:
-   `trening` → `treningslogg-794.netlify.app`, at whatever registrar/DNS
-   provider hosts `syndikatet.eu` (not Netlify — confirmed empty via
-   `getDnsZones`). Once that resolves and Netlify issues the cert, the app is
-   reachable at the real domain instead of the `.netlify.app` one.
-2. **No git-based CI/CD.** Every deploy so far was `netlify deploy --prod`,
-   run manually from this machine. To get "push to `main` auto-deploys":
-   Netlify dashboard → this site → Site configuration → Build & deploy →
-   Link repository → authorize the Netlify GitHub App for `lstol/Gym`. That's
-   an OAuth/app-install grant, so it's a for-the-user action, not something to
-   script from here.
+1. **TLS cert for `gym.syndikatet.eu` still provisioning** as of 2026-08-23 —
+   see the live-state note above. Check `getSite` → `ssl` before assuming
+   it's stuck; if it's still `false` after a few hours, something's actually
+   wrong and needs a look (Netlify support or re-triggering
+   `provisionSiteTLSCertificate`).
+2. **No git-based CI/CD** — see the GitHub note above. Needs the user to link
+   the repo from the Netlify dashboard (GitHub App install, can't be scripted).
 3. **`supabase/functions/` doesn't exist yet** — correct for this phase
    (strava-oauth/strava-sync are phase 4).
 4. **No local Docker/Supabase.** Verification happened directly against the
