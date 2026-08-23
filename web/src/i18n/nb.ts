@@ -15,6 +15,11 @@ export const nb = {
     changePasswordSubmit: 'Bytt passord',
     passwordTooShort: 'Passordet må være minst 8 tegn.',
     passwordMismatch: 'Passordene er ikke like.',
+    noAccount: 'Har du ikke konto?',
+    hasAccount: 'Har du allerede konto?',
+    signupTitle: 'Opprett konto',
+    signupSubmit: 'Opprett konto',
+    signupAwaitingConfirmation: 'Sjekk e-posten din for å bekrefte kontoen.',
   },
   nav: {
     home: 'Oversikt',

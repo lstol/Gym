@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { nb } from '../i18n/nb'
 import { useAuth } from '../data/auth'
 
@@ -63,6 +63,13 @@ export function LoginPage() {
           {nb.auth.signIn}
         </button>
       </form>
+
+      <p className="mt-6 text-sm text-stone-600">
+        {nb.auth.noAccount}{' '}
+        <Link to="/signup" className="font-medium text-stone-900 underline">
+          {nb.auth.signupSubmit}
+        </Link>
+      </p>
     </div>
   )
 }

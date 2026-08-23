@@ -7,6 +7,7 @@ type AuthState = {
   loading: boolean
   mustChangePassword: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  signUp: (email: string, password: string) => Promise<{ error: string | null }>
   changePassword: (newPassword: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
@@ -33,6 +34,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error?.message ?? null }
   }
 
+  async function signUp(email: string, password: string) {
+    const { error } = await supabase.auth.signUp({ email, password })
+    return { error: error?.message ?? null }
+  }
+
   async function changePassword(newPassword: string) {
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
@@ -49,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, loading, mustChangePassword, signIn, changePassword, signOut }}
+      value={{ session, loading, mustChangePassword, signIn, signUp, changePassword, signOut }}
     >
       {children}
     </AuthContext.Provider>

@@ -4,6 +4,7 @@ import { AuthProvider } from './data/auth'
 import { ProtectedRoute } from './ui/ProtectedRoute'
 import { PublicOnlyRoute } from './ui/PublicOnlyRoute'
 import { LoginPage } from './ui/LoginPage'
+import { SignupPage } from './ui/SignupPage'
 import { ChangePasswordPage } from './ui/ChangePasswordPage'
 import { HomePage } from './features/progress/HomePage'
 import { SettingsPage } from './features/settings/SettingsPage'
@@ -18,6 +19,7 @@ export function App() {
           <Routes>
             <Route element={<PublicOnlyRoute />}>
               <Route path="/login" element={<LoginPage />} />
+              <Route path="/signup" element={<SignupPage />} />
             </Route>
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<HomePage />} />
