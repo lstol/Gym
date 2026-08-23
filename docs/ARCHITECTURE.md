@@ -1,4 +1,4 @@
-# Arkitektur — Treningslogg, trening.syndikatet.eu
+# Arkitektur — Treningslogg, gym.syndikatet.eu
 
 Revisjon 2. Endringer fra rev 1: offline-først fjernet, lastmodellen skrevet om rundt
 maskinens stasjoner og pulley-ratioer, faseplan justert.
@@ -28,7 +28,7 @@ bygge for en skala som aldri kommer.
 
 ```
 ┌──────────────────────────────────────────────┐
-│  PWA (React + TS)   trening.syndikatet.eu    │
+│  PWA (React + TS)   gym.syndikatet.eu        │
 │  ┌────────────┐  ┌─────────────┐             │
 │  │ UI/features│→ │ domain/     │  ren logikk │
 │  └─────┬──────┘  └─────────────┘             │
@@ -208,7 +208,7 @@ service role-nøkkelen ender der, og da er RLS irrelevant.
 
 ## 5. Deploy
 
-- Netlify bygger `web/` og serverer `web/dist`. `trening.syndikatet.eu` som CNAME.
+- Netlify bygger `web/` og serverer `web/dist`. `gym.syndikatet.eu` som CNAME.
   Build `pnpm build`, publish `web/dist`, SPA-redirect `/* → /index.html 200`.
 - Migrasjoner deployes separat med `supabase db push`. Append-only.
 - Edge Functions: `supabase functions deploy <navn>`.

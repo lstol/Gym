@@ -1,4 +1,4 @@
-# CLAUDE.md — Treningslogg (trening.syndikatet.eu)
+# CLAUDE.md — Treningslogg (gym.syndikatet.eu)
 
 > Written in English on purpose: this file steers a coding agent, and mixed-language
 > instruction files cause identifier drift. **UI strings are Norwegian; code is English.**
@@ -43,7 +43,7 @@ no barbell) · exercise videos · an LLM chat coach · periodisation planner.
 | Styling | Tailwind CSS |
 | Charts | Recharts |
 | Backend | Supabase: Postgres, Auth, RLS, Edge Functions (Deno) |
-| Hosting | Netlify — static build only, domain `trening.syndikatet.eu` |
+| Hosting | Netlify — static build only, domain `gym.syndikatet.eu` |
 | Tests | Vitest (unit), Playwright (e2e smoke) |
 | Package manager | pnpm |
 

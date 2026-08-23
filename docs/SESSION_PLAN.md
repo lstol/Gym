@@ -6,7 +6,7 @@ schema/load-model/progression decisions get asked, not guessed (CLAUDE.md §8).
 
 | # | Phase | Scope | Done when |
 |---|---|---|---|
-| 1 | 0 + 1 | Repo scaffold (Vite+React+TS+Tailwind+TanStack Query+vite-plugin-pwa), CI-ready lint/typecheck/test, Netlify config, machine/station/exercise/program schema + RLS, seed data, magic-link auth, empty app deployed | You can log in at trening.syndikatet.eu and see Blokk 1's program |
+| 1 | 0 + 1 | Repo scaffold (Vite+React+TS+Tailwind+TanStack Query+vite-plugin-pwa), CI-ready lint/typecheck/test, Netlify config, machine/station/exercise/program schema + RLS, seed data, magic-link auth, empty app deployed | You can log in at gym.syndikatet.eu and see Blokk 1's program |
 | 2 | 2 | Logger UI: pin/station picker, set entry, workout draft in `localStorage`, **manual backdated entry with date picker** | The paper log from block 1 can be keyed in end to end |
 | 3 | 3 | Domain engine only, `src/domain/`, **test-first**: effective load, double progression, rep-drop prediction, station ceiling warnings, stalling detection. Wired into the logger as proposals only | Proposal is correct on all three station types (high/mid-low/press-arm), matches the worked examples in CLAUDE.md §4.4 |
 | 4 | 4 | Strava OAuth + `strava-sync` Edge Function + pg_cron, `perceived_effort`/`heavy_legs` columns that survive re-sync | Runs show up without manual entry |
