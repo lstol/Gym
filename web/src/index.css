@@ -1,1 +1,49 @@
 @import 'tailwindcss';
+
+/* A calm, warm palette — utilitarian rather than a flashy fitness app, but not
+   the pure black-on-white it started as. Session codes get their own hues so
+   A/B/C are distinguishable at a glance in the calendar. */
+@theme {
+  --color-canvas: oklch(97.2% 0.008 85);
+  --color-surface: oklch(100% 0 0);
+  --color-sunken: oklch(96% 0.008 85);
+  --color-line: oklch(90% 0.008 85);
+  --color-ink: oklch(25% 0.02 260);
+  --color-muted: oklch(52% 0.016 260);
+  --color-faint: oklch(66% 0.014 260);
+
+  --color-brand: oklch(46% 0.1 255);
+  --color-brand-dark: oklch(38% 0.11 255);
+  --color-brand-soft: oklch(94% 0.03 255);
+
+  --color-done: oklch(53% 0.12 155);
+  --color-done-soft: oklch(94% 0.04 155);
+  --color-warn: oklch(58% 0.13 65);
+  --color-warn-soft: oklch(95% 0.05 75);
+  --color-danger: oklch(52% 0.17 25);
+
+  --color-sess-a: oklch(46% 0.11 255);
+  --color-sess-b: oklch(48% 0.09 195);
+  --color-sess-c: oklch(55% 0.12 45);
+}
+
+html,
+body {
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+/* Tabular figures everywhere numbers are compared down a column. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+}

@@ -16,6 +16,53 @@ export function useExercises() {
   return useQuery({ queryKey: ['exercise'], queryFn: fetchExercises })
 }
 
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/æ/g, 'ae')
+    .replace(/ø/g, 'o')
+    .replace(/å/g, 'a')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60)
+}
+
+/**
+ * A user's own "other" exercise. Carries their user_id, so RLS keeps it
+ * private — the shared Inspire M2 catalog is the rows with user_id null.
+ */
+async function createCustomExercise(args: {
+  name: string
+  loadSource: 'stack' | 'bodyweight' | 'external'
+  stationId: string | null
+}): Promise<Exercise> {
+  const userId = await getCurrentUserId()
+  const { data, error } = await supabase
+    .from('exercise')
+    .insert({
+      user_id: userId,
+      slug: slugify(args.name) || `ovelse-${Date.now()}`,
+      name_nb: args.name.trim(),
+      muscle_group: 'annet',
+      is_unilateral: false,
+      default_station_id: args.stationId,
+      load_source: args.loadSource,
+    })
+    .select('*, station:default_station_id(*, machine:machine_id(*))')
+    .single()
+
+  if (error) throw error
+  return data as Exercise
+}
+
+export function useCreateCustomExercise() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createCustomExercise,
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['exercise'] }),
+  })
+}
+
 async function addTemplateItem(args: {
   templateId: string
   exerciseId: string

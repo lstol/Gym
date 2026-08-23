@@ -25,32 +25,32 @@ export function LoggerPage() {
   }, [setEntries])
 
   if (workoutLoading || templateLoading || !workout || !template) {
-    return <div className="p-6 text-sm text-stone-500">{nb.logger.loading}</div>
+    return <div className="p-6 text-sm text-muted">{nb.logger.loading}</div>
   }
 
   const items = template.items.slice().sort((a, b) => a.order - b.order)
 
   return (
     <div className="mx-auto max-w-md pb-28">
-      <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/95 px-4 py-3 backdrop-blur">
+      <header className="sticky top-0 z-10 border-b border-line bg-surface/95 px-4 py-3 backdrop-blur">
         <button
           type="button"
           onClick={() => navigate('/')}
-          className="text-sm text-stone-500 underline"
+          className="text-sm text-muted underline"
         >
           ← {nb.logger.back}
         </button>
         <div className="mt-1 flex items-baseline justify-between">
-          <h1 className="text-lg font-semibold text-stone-900">
+          <h1 className="text-lg font-semibold text-ink">
             {template.code} — {template.name_nb}
           </h1>
-          <span className="font-mono text-xs text-stone-500">{workout.date}</span>
+          <span className="font-mono text-xs text-muted">{workout.date}</span>
         </div>
-        <p className="mt-0.5 text-xs text-stone-400">{nb.logger.logHint}</p>
+        <p className="mt-0.5 text-xs text-faint">{nb.logger.logHint}</p>
       </header>
 
       <div className="space-y-3 p-4">
-        {items.length === 0 && <p className="text-sm text-stone-500">{nb.logger.noExercises}</p>}
+        {items.length === 0 && <p className="text-sm text-muted">{nb.logger.noExercises}</p>}
 
         {items.map((item) => (
           <ExerciseBlock
@@ -62,14 +62,14 @@ export function LoggerPage() {
         ))}
       </div>
 
-      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md border-t border-stone-200 bg-white p-4">
+      <div className="fixed inset-x-0 bottom-0 mx-auto max-w-md border-t border-line bg-surface p-4">
         <button
           type="button"
           onClick={async () => {
             await setWorkoutStatus.mutateAsync({ workoutId: workout.id, status: 'completed' })
             navigate('/')
           }}
-          className="w-full rounded-xl bg-stone-900 py-3 text-sm font-semibold text-white"
+          className="w-full rounded-xl bg-brand py-3 text-sm font-semibold text-white"
         >
           {workout.status === 'completed' ? nb.logger.completed : nb.logger.finishSession}
         </button>

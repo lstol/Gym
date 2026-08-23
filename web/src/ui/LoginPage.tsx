@@ -23,11 +23,11 @@ export function LoginPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
-      <h1 className="text-2xl font-semibold text-stone-900">{nb.appName}</h1>
-      <h2 className="mt-2 text-base text-stone-600">{nb.auth.loginTitle}</h2>
+      <h1 className="text-2xl font-semibold text-ink">{nb.appName}</h1>
+      <h2 className="mt-2 text-base text-muted">{nb.auth.loginTitle}</h2>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-        <label className="block text-sm font-medium text-stone-700" htmlFor="email">
+        <label className="block text-sm font-medium text-muted" htmlFor="email">
           {nb.auth.emailLabel}
         </label>
         <input
@@ -38,10 +38,10 @@ export function LoginPage() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder={nb.auth.emailPlaceholder}
-          className="w-full rounded-lg border border-stone-300 px-3 py-2 text-base"
+          className="w-full rounded-lg border border-line px-3 py-2 text-base"
         />
 
-        <label className="block text-sm font-medium text-stone-700" htmlFor="password">
+        <label className="block text-sm font-medium text-muted" htmlFor="password">
           {nb.auth.passwordLabel}
         </label>
         <input
@@ -51,22 +51,22 @@ export function LoginPage() {
           autoComplete="current-password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded-lg border border-stone-300 px-3 py-2 text-base"
+          className="w-full rounded-lg border border-line px-3 py-2 text-base"
         />
 
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p className="text-sm text-danger">{error}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
           {nb.auth.signIn}
         </button>
       </form>
 
-      <p className="mt-6 text-sm text-stone-600">
+      <p className="mt-6 text-sm text-muted">
         {nb.auth.noAccount}{' '}
-        <Link to="/signup" className="font-medium text-stone-900 underline">
+        <Link to="/signup" className="font-medium text-ink underline">
           {nb.auth.signupSubmit}
         </Link>
       </p>

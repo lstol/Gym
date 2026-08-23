@@ -8,9 +8,9 @@ export function ProgressSection({ currentExerciseIds }: { currentExerciseIds: st
 
   if (isLoading) {
     return (
-      <section className="rounded-2xl border border-stone-200 bg-white p-4">
-        <h2 className="text-base font-semibold text-stone-900">{nb.progress.title}</h2>
-        <p className="mt-2 text-sm text-stone-500">{nb.logger.loading}</p>
+      <section className="rounded-2xl border border-line bg-surface p-4">
+        <h2 className="text-base font-semibold text-ink">{nb.progress.title}</h2>
+        <p className="mt-2 text-sm text-muted">{nb.logger.loading}</p>
       </section>
     )
   }
@@ -19,16 +19,16 @@ export function ProgressSection({ currentExerciseIds }: { currentExerciseIds: st
   const archived = (progress ?? []).filter((p) => !p.inCurrentProgram)
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4">
-      <h2 className="text-base font-semibold text-stone-900">{nb.progress.title}</h2>
+    <section className="rounded-2xl border border-line bg-surface p-4">
+      <h2 className="text-base font-semibold text-ink">{nb.progress.title}</h2>
 
       {(progress ?? []).length === 0 && (
-        <p className="mt-2 text-sm text-stone-500">{nb.progress.noData}</p>
+        <p className="mt-2 text-sm text-muted">{nb.progress.noData}</p>
       )}
 
       {current.length > 0 && (
         <>
-          <h3 className="mt-3 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          <h3 className="mt-3 text-xs font-semibold uppercase tracking-wide text-faint">
             {nb.progress.current}
           </h3>
           <div className="mt-2 space-y-2">
@@ -41,7 +41,7 @@ export function ProgressSection({ currentExerciseIds }: { currentExerciseIds: st
 
       {archived.length > 0 && (
         <>
-          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-stone-400">
+          <h3 className="mt-4 text-xs font-semibold uppercase tracking-wide text-faint">
             {nb.progress.archived}
           </h3>
           <div className="mt-2 space-y-2">
@@ -73,20 +73,20 @@ function ExerciseChart({ progress }: { progress: ExerciseProgress }) {
   const trendUp = latest && first ? latest.topKg > first.topKg : false
 
   return (
-    <div className="rounded-xl bg-stone-50 p-3">
+    <div className="rounded-xl bg-sunken p-3">
       <div className="flex items-baseline justify-between">
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium text-stone-900">{progress.name}</p>
-          <p className="text-xs text-stone-500">
+          <p className="truncate text-sm font-medium text-ink">{progress.name}</p>
+          <p className="text-xs text-muted">
             {progress.points.length} {nb.progress.sessions}
           </p>
         </div>
         {latest && (
           <div className="text-right">
-            <p className="font-mono text-sm font-bold text-stone-900">
+            <p className="font-mono text-sm font-bold text-ink">
               {latest.topKg.toFixed(1).replace('.', ',')} kg
             </p>
-            <p className={`text-xs ${trendUp ? 'text-emerald-600' : 'text-stone-400'}`}>
+            <p className={`text-xs ${trendUp ? 'text-done' : 'text-faint'}`}>
               × {latest.reps}
             </p>
           </div>
@@ -99,13 +99,13 @@ function ExerciseChart({ progress }: { progress: ExerciseProgress }) {
             <LineChart data={progress.points} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>
               <XAxis
                 dataKey="date"
-                tick={{ fontSize: 10, fill: '#a8a29e' }}
+                tick={{ fontSize: 10, fill: 'var(--color-faint)' }}
                 tickFormatter={(d: string) => d.slice(5)}
                 axisLine={false}
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: '#a8a29e' }}
+                tick={{ fontSize: 10, fill: 'var(--color-faint)' }}
                 axisLine={false}
                 tickLine={false}
                 width={34}
@@ -120,9 +120,9 @@ function ExerciseChart({ progress }: { progress: ExerciseProgress }) {
               <Line
                 type="monotone"
                 dataKey="topKg"
-                stroke="#1c2f4a"
+                stroke="var(--color-brand)"
                 strokeWidth={2}
-                dot={{ r: 2.5, fill: '#1c2f4a' }}
+                dot={{ r: 2.5, fill: 'var(--color-brand)' }}
                 isAnimationActive={false}
               />
             </LineChart>

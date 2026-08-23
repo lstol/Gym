@@ -31,40 +31,40 @@ export function ExerciseBlock({
   const sides: (Side | null)[] = exercise.is_unilateral ? ['L', 'R'] : [null]
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4">
+    <section className="rounded-2xl border border-line bg-surface p-4">
       <header>
         <div className="flex items-baseline justify-between gap-2">
-          <h2 className="text-base font-semibold text-stone-900">{exercise.name_nb}</h2>
+          <h2 className="text-base font-semibold text-ink">{exercise.name_nb}</h2>
           {station && (
-            <span className="shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[11px] font-medium text-stone-600">
+            <span className="shrink-0 rounded-full bg-sunken px-2 py-0.5 text-[11px] font-medium text-muted">
               {station.code.replace(/_/g, ' ')}
             </span>
           )}
         </div>
-        <p className="mt-0.5 text-xs text-stone-500">
+        <p className="mt-0.5 text-xs text-muted">
           {nb.logger.target}: {item.target_sets} × {item.rep_min}–{item.rep_max} reps ·{' '}
           {item.rir_min}–{item.rir_max} RIR · {item.rest_sec}s
         </p>
-        {item.note && <p className="mt-0.5 text-xs italic text-stone-400">{item.note}</p>}
+        {item.note && <p className="mt-0.5 text-xs italic text-faint">{item.note}</p>}
       </header>
 
       {exercise.load_source === 'stack' && (
-        <div className="mt-3 flex items-center justify-center gap-5 rounded-xl bg-stone-50 py-3">
+        <div className="mt-3 flex items-center justify-center gap-5 rounded-xl bg-sunken py-3">
           <button
             type="button"
             aria-label="Lavere pinne"
             onClick={() => setPin((p) => Math.max(1, p - 1))}
-            className="flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-white text-xl font-bold"
+            className="flex h-11 w-11 items-center justify-center rounded-full border border-line bg-surface text-xl font-bold"
           >
             −
           </button>
           <div className="min-w-[7rem] text-center">
-            <div className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+            <div className="text-[10px] font-semibold uppercase tracking-wide text-faint">
               {nb.logger.pin}
             </div>
-            <div className="font-mono text-3xl font-bold leading-none text-stone-900">{pin}</div>
+            <div className="font-mono text-3xl font-bold leading-none text-ink">{pin}</div>
             {eff !== null && (
-              <div className="mt-0.5 font-mono text-xs text-stone-500">
+              <div className="mt-0.5 font-mono text-xs text-muted">
                 ≈ {eff.toFixed(1).replace('.', ',')} kg
               </div>
             )}
@@ -73,7 +73,7 @@ export function ExerciseBlock({
             type="button"
             aria-label="Høyere pinne"
             onClick={() => setPin((p) => Math.min(15, p + 1))}
-            className="flex h-11 w-11 items-center justify-center rounded-full bg-stone-900 text-xl font-bold text-white"
+            className="flex h-11 w-11 items-center justify-center rounded-full bg-brand text-xl font-bold text-white"
           >
             +
           </button>
@@ -81,14 +81,14 @@ export function ExerciseBlock({
       )}
 
       {nearCeiling && (
-        <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs font-medium text-amber-700">
+        <p className="mt-2 rounded-lg bg-warn-soft px-2 py-1 text-xs font-medium text-warn">
           {nb.logger.ceilingWarning}
         </p>
       )}
 
       {exercise.load_source === 'external' && (
-        <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-stone-50 py-3">
-          <label htmlFor={`kg-${item.id}`} className="text-xs font-semibold text-stone-500">
+        <div className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-sunken py-3">
+          <label htmlFor={`kg-${item.id}`} className="text-xs font-semibold text-muted">
             {nb.logger.externalKg}
           </label>
           <input
@@ -97,31 +97,28 @@ export function ExerciseBlock({
             inputMode="decimal"
             value={externalKg}
             onChange={(e) => setExternalKg(Number(e.target.value) || 0)}
-            className="w-20 rounded-lg border border-stone-300 bg-white px-2 py-1.5 text-center font-mono text-lg"
+            className="w-20 rounded-lg border border-line bg-surface px-2 py-1.5 text-center font-mono text-lg"
           />
-          <span className="text-xs text-stone-500">kg</span>
+          <span className="text-xs text-muted">kg</span>
         </div>
       )}
 
       {exercise.load_source === 'bodyweight' && (
-        <p className="mt-3 rounded-xl bg-stone-50 py-2 text-center text-xs text-stone-500">
+        <p className="mt-3 rounded-xl bg-sunken py-2 text-center text-xs text-muted">
           {nb.logger.bodyweight}
         </p>
       )}
 
       <div className="mt-3">
-        <div className="grid grid-cols-[2rem_1fr_1fr_2.5rem_4rem] items-end gap-2 px-1 pb-1">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+        <div className="grid grid-cols-[2rem_1fr_1fr_1.75rem] items-end gap-2 px-1 pb-1">
+          <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-faint">
             {nb.logger.setNumber}
           </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+          <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-faint">
             {nb.logger.reps}
           </span>
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+          <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-faint">
             {nb.logger.rir}
-          </span>
-          <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-stone-400">
-            {nb.logger.warmup}
           </span>
           <span />
         </div>
@@ -148,7 +145,7 @@ export function ExerciseBlock({
         <button
           type="button"
           onClick={() => setExtraSets((n) => n + 1)}
-          className="mt-2 w-full rounded-lg border border-dashed border-stone-300 py-2 text-xs font-medium text-stone-500"
+          className="mt-2 w-full rounded-lg border border-dashed border-line py-2 text-xs font-medium text-muted"
         >
           + {nb.logger.addSet}
         </button>

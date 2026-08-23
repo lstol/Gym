@@ -15,16 +15,16 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-md space-y-4 p-4 pb-16">
       <header className="flex items-center justify-between px-1 pt-2">
-        <h1 className="text-xl font-semibold text-stone-900">{nb.appName}</h1>
-        <Link to="/settings" className="text-sm text-stone-500 underline">
+        <h1 className="text-xl font-semibold text-ink">{nb.appName}</h1>
+        <Link to="/settings" className="text-sm text-muted underline">
           {nb.nav.settings}
         </Link>
       </header>
 
-      {isLoading && <p className="px-1 text-sm text-stone-500">{nb.home.loading}</p>}
+      {isLoading && <p className="px-1 text-sm text-muted">{nb.home.loading}</p>}
 
       {!isLoading && !program && (
-        <p className="px-1 text-sm text-stone-500">{nb.program.noProgram}</p>
+        <p className="px-1 text-sm text-muted">{nb.program.noProgram}</p>
       )}
 
       {program && (

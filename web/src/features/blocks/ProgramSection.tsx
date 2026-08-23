@@ -1,27 +1,34 @@
 import { useState } from 'react'
 import { nb } from '../../i18n/nb'
 import type { ProgramWithTemplates } from '../../data/types'
-import { useExercises, useAddTemplateItem, useRemoveTemplateItem } from '../../data/queries/exercise'
+import { useAddTemplateItem, useRemoveTemplateItem } from '../../data/queries/exercise'
+import { ExercisePicker } from './ExercisePicker'
+import { SESSION_ACCENT } from '../calendar/sessionAccent'
 
 export function ProgramSection({ program }: { program: ProgramWithTemplates }) {
   const [editing, setEditing] = useState(false)
-  const { data: exercises } = useExercises()
+  const [pickerFor, setPickerFor] = useState<string | null>(null)
   const addItem = useAddTemplateItem()
   const removeItem = useRemoveTemplateItem()
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4">
+    <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-base font-semibold text-stone-900">{program.name}</h2>
-          <p className="text-xs text-stone-500">
+          <h2 className="text-base font-semibold text-ink">{program.name}</h2>
+          <p className="text-xs text-faint">
             {program.start_date} → {program.end_date ?? nb.program.openEnded}
           </p>
         </div>
         <button
           type="button"
-          onClick={() => setEditing((e) => !e)}
-          className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium"
+          onClick={() => {
+            setEditing((e) => !e)
+            setPickerFor(null)
+          }}
+          className={`rounded-lg px-3 py-1.5 text-xs font-semibold ${
+            editing ? 'bg-brand text-white' : 'border border-line text-muted'
+          }`}
         >
           {editing ? nb.program.done : nb.program.edit}
         </button>
@@ -32,26 +39,32 @@ export function ProgramSection({ program }: { program: ProgramWithTemplates }) {
           .slice()
           .sort((a, b) => a.code.localeCompare(b.code))
           .map((t) => {
+            const accent = SESSION_ACCENT[t.code] ?? SESSION_ACCENT.default
             const usedIds = t.items.map((i) => i.exercise_id)
-            const available = (exercises ?? []).filter((e) => !usedIds.includes(e.id))
             const nextOrder = Math.max(0, ...t.items.map((i) => i.order)) + 1
 
             return (
-              <div key={t.id} className="rounded-xl bg-stone-50 p-3">
-                <p className="text-sm font-semibold text-stone-900">
-                  {t.code} — {t.name_nb}
-                </p>
-                <ul className="mt-2 divide-y divide-stone-200">
+              <div key={t.id} className="rounded-xl bg-sunken p-3">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold text-white ${accent.bg}`}
+                  >
+                    {t.code}
+                  </span>
+                  <p className="text-sm font-semibold text-ink">{t.name_nb}</p>
+                </div>
+
+                <ul className="mt-2 divide-y divide-line">
                   {t.items
                     .slice()
                     .sort((a, b) => a.order - b.order)
                     .map((item) => (
                       <li key={item.id} className="flex items-center justify-between py-1.5">
                         <div className="min-w-0">
-                          <p className="truncate text-sm text-stone-800">
+                          <p className="truncate text-sm text-ink">
                             {item.exercise?.name_nb ?? '—'}
                           </p>
-                          <p className="text-xs text-stone-500">
+                          <p className="tnum text-xs text-faint">
                             {item.target_sets} {nb.program.sets} · {item.rep_min}–{item.rep_max} reps
                           </p>
                         </div>
@@ -59,7 +72,7 @@ export function ProgramSection({ program }: { program: ProgramWithTemplates }) {
                           <button
                             type="button"
                             onClick={() => removeItem.mutate(item.id)}
-                            className="ml-2 shrink-0 rounded-lg border border-stone-300 px-2 py-1 text-xs text-red-600"
+                            className="ml-2 shrink-0 rounded-lg border border-line px-2 py-1 text-xs text-danger"
                           >
                             {nb.program.removeExercise}
                           </button>
@@ -68,28 +81,29 @@ export function ProgramSection({ program }: { program: ProgramWithTemplates }) {
                     ))}
                 </ul>
 
-                {editing && available.length > 0 && (
-                  <select
-                    aria-label={nb.program.addExercise}
-                    value=""
-                    onChange={(e) => {
-                      if (!e.target.value) return
-                      addItem.mutate({
-                        templateId: t.id,
-                        exerciseId: e.target.value,
-                        order: nextOrder,
-                      })
-                    }}
-                    className="mt-2 w-full rounded-lg border border-stone-300 px-2 py-1.5 text-sm"
-                  >
-                    <option value="">+ {nb.program.addExercise}</option>
-                    {available.map((e) => (
-                      <option key={e.id} value={e.id}>
-                        {e.name_nb}
-                      </option>
-                    ))}
-                  </select>
-                )}
+                {editing &&
+                  (pickerFor === t.id ? (
+                    <ExercisePicker
+                      excludeIds={usedIds}
+                      onCancel={() => setPickerFor(null)}
+                      onPick={(exercise) => {
+                        addItem.mutate({
+                          templateId: t.id,
+                          exerciseId: exercise.id,
+                          order: nextOrder,
+                        })
+                        setPickerFor(null)
+                      }}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setPickerFor(t.id)}
+                      className="mt-2 w-full rounded-lg border border-dashed border-line py-2 text-xs font-medium text-brand"
+                    >
+                      + {nb.program.addExercise}
+                    </button>
+                  ))}
               </div>
             )
           })}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { nb } from '../../i18n/nb'
 import { addMonths, isoWeekdayOf, monthBounds, datesInRange } from '../../domain/schedule'
@@ -11,26 +11,33 @@ import {
 import type { ScheduledWorkout } from '../../data/queries/schedule'
 import type { ProgramWithTemplates } from '../../data/types'
 import { toLocalDateString } from '../../data/localDate'
+import { SESSION_ACCENT } from './sessionAccent'
 
-const STATUS_STYLE: Record<string, string> = {
-  planned: 'bg-stone-200 text-stone-700',
-  completed: 'bg-emerald-600 text-white',
-  skipped: 'bg-amber-100 text-amber-700 line-through',
+type DragState = {
+  workout: ScheduledWorkout
+  x: number
+  y: number
+  active: boolean
 }
 
 export function CalendarSection({ program }: { program: ProgramWithTemplates }) {
   const today = toLocalDateString(new Date())
+  const navigate = useNavigate()
   const [cursor, setCursor] = useState(today)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
 
   const { first, last } = monthBounds(cursor)
   const { data: workouts } = useWorkoutsInRange(first, last)
   const generateSchedule = useGenerateSchedule()
+  const moveWorkout = useMoveWorkout()
+  const deleteWorkout = useDeleteWorkout()
 
-  // Materialise planned sessions for the month being viewed. Only ever fills
-  // forward of the watermark, so deleted sessions stay deleted.
-  const needsGeneration =
-    !program.scheduled_through || program.scheduled_through < last
+  const [drag, setDrag] = useState<DragState | null>(null)
+  const [hoverDate, setHoverDate] = useState<string | null>(null)
+  const [overTrash, setOverTrash] = useState(false)
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  const needsGeneration = !program.scheduled_through || program.scheduled_through < last
   useEffect(() => {
     if (!needsGeneration || generateSchedule.isPending) return
     generateSchedule.mutate({
@@ -52,15 +59,60 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
     return map
   }, [workouts])
 
-  // Pad the grid so the month starts on the correct weekday column (Mon-first).
+  function dateUnderPointer(x: number, y: number): string | null {
+    const el = document.elementFromPoint(x, y)
+    const cell = el?.closest('[data-date]') as HTMLElement | null
+    return cell?.dataset.date ?? null
+  }
+
+  function isOverTrash(x: number, y: number): boolean {
+    const el = document.elementFromPoint(x, y)
+    return !!el?.closest('[data-trash]')
+  }
+
+  function handlePointerDown(e: React.PointerEvent, workout: ScheduledWorkout) {
+    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
+    setDrag({ workout, x: e.clientX, y: e.clientY, active: false })
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (!drag) return
+    const movedEnough =
+      Math.abs(e.clientX - drag.x) > 6 || Math.abs(e.clientY - drag.y) > 6 || drag.active
+    if (!movedEnough) return
+    setDrag({ ...drag, x: e.clientX, y: e.clientY, active: true })
+    setHoverDate(dateUnderPointer(e.clientX, e.clientY))
+    setOverTrash(isOverTrash(e.clientX, e.clientY))
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (!drag) return
+    const wasDragging = drag.active
+    const dropDate = dateUnderPointer(e.clientX, e.clientY)
+    const trash = isOverTrash(e.clientX, e.clientY)
+
+    if (wasDragging && trash) {
+      deleteWorkout.mutate(drag.workout.id)
+    } else if (wasDragging && dropDate && dropDate !== drag.workout.date) {
+      moveWorkout.mutate({ workoutId: drag.workout.id, date: dropDate })
+    } else if (!wasDragging) {
+      // A tap, not a drag — open that day.
+      setSelectedDate(drag.workout.date === selectedDate ? null : drag.workout.date)
+    }
+
+    setDrag(null)
+    setHoverDate(null)
+    setOverTrash(false)
+  }
+
   const leadingBlanks = isoWeekdayOf(first) - 1
   const days = datesInRange(first, last)
   const [year, month] = cursor.split('-').map(Number)
 
   return (
-    <section className="rounded-2xl border border-stone-200 bg-white p-4">
+    <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
       <div className="flex items-center justify-between">
-        <h2 className="text-base font-semibold text-stone-900">
+        <h2 className="text-base font-semibold text-ink">
           {nb.calendar.months[month - 1]} {year}
         </h2>
         <div className="flex items-center gap-1">
@@ -68,14 +120,14 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
             type="button"
             aria-label={nb.calendar.prevMonth}
             onClick={() => setCursor(addMonths(cursor, -1))}
-            className="h-8 w-8 rounded-lg border border-stone-200 text-sm"
+            className="h-8 w-8 rounded-lg border border-line text-muted"
           >
             ‹
           </button>
           <button
             type="button"
             onClick={() => setCursor(today)}
-            className="h-8 rounded-lg border border-stone-200 px-2 text-xs font-medium"
+            className="h-8 rounded-lg border border-line px-2 text-xs font-medium text-muted"
           >
             {nb.calendar.today}
           </button>
@@ -83,20 +135,20 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
             type="button"
             aria-label={nb.calendar.nextMonth}
             onClick={() => setCursor(addMonths(cursor, 1))}
-            className="h-8 w-8 rounded-lg border border-stone-200 text-sm"
+            className="h-8 w-8 rounded-lg border border-line text-muted"
           >
             ›
           </button>
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wide text-stone-400">
+      <div className="mt-3 grid grid-cols-7 gap-1 text-center text-[10px] font-semibold uppercase tracking-wide text-faint">
         {nb.calendar.weekdays.map((d) => (
           <div key={d}>{d}</div>
         ))}
       </div>
 
-      <div className="mt-1 grid grid-cols-7 gap-1">
+      <div ref={gridRef} className="mt-1 grid grid-cols-7 gap-1">
         {Array.from({ length: leadingBlanks }, (_, i) => (
           <div key={`blank-${i}`} />
         ))}
@@ -104,136 +156,136 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
           const sessions = byDate.get(date) ?? []
           const isToday = date === today
           const isSelected = date === selectedDate
+          const isHovered = drag?.active && hoverDate === date
           return (
-            <button
+            <div
               key={date}
-              type="button"
+              data-date={date}
               onClick={() => setSelectedDate(isSelected ? null : date)}
-              className={`flex min-h-[3rem] flex-col items-center gap-0.5 rounded-lg border p-1 ${
-                isSelected
-                  ? 'border-stone-900 bg-stone-50'
-                  : isToday
-                    ? 'border-stone-400 bg-stone-50'
-                    : 'border-transparent hover:bg-stone-50'
+              className={`flex min-h-[3.25rem] cursor-pointer flex-col items-center gap-0.5 rounded-lg border p-1 transition-colors ${
+                isHovered
+                  ? 'border-brand bg-brand-soft'
+                  : isSelected
+                    ? 'border-brand bg-sunken'
+                    : isToday
+                      ? 'border-brand/40 bg-sunken'
+                      : 'border-transparent'
               }`}
             >
               <span
-                className={`text-xs ${isToday ? 'font-bold text-stone-900' : 'text-stone-500'}`}
+                className={`tnum text-xs ${isToday ? 'font-bold text-brand' : 'text-muted'}`}
               >
                 {Number(date.slice(8))}
               </span>
               <span className="flex flex-wrap justify-center gap-0.5">
-                {sessions.map((s) => (
-                  <span
-                    key={s.id}
-                    className={`rounded px-1 text-[10px] font-bold leading-4 ${
-                      STATUS_STYLE[s.status] ?? STATUS_STYLE.planned
-                    }`}
-                  >
-                    {s.template?.code ?? '?'}
-                  </span>
-                ))}
+                {sessions.map((s) => {
+                  const accent = SESSION_ACCENT[s.template?.code ?? ''] ?? SESSION_ACCENT.default
+                  const dragging = drag?.active && drag.workout.id === s.id
+                  return (
+                    <span
+                      key={s.id}
+                      onPointerDown={(e) => handlePointerDown(e, s)}
+                      onPointerMove={handlePointerMove}
+                      onPointerUp={handlePointerUp}
+                      className={`touch-none select-none rounded px-1.5 text-[10px] font-bold leading-5 ${
+                        s.status === 'completed'
+                          ? 'bg-done text-white'
+                          : s.status === 'skipped'
+                            ? 'bg-warn-soft text-warn line-through'
+                            : `${accent.bg} text-white`
+                      } ${dragging ? 'opacity-30' : ''}`}
+                    >
+                      {s.template?.code ?? '?'}
+                    </span>
+                  )
+                })}
               </span>
-            </button>
+            </div>
           )
         })}
       </div>
 
+      <p className="mt-2 text-[11px] text-faint">{nb.calendar.dragHint}</p>
+
       {selectedDate && (
         <DayDetail
-          date={selectedDate}
           sessions={byDate.get(selectedDate) ?? []}
-          onClose={() => setSelectedDate(null)}
+          onOpen={(id) => navigate(`/logger/${id}`)}
         />
+      )}
+
+      {drag?.active && (
+        <>
+          <div
+            className="pointer-events-none fixed z-50 rounded px-2 text-xs font-bold leading-6 text-white shadow-lg"
+            style={{
+              left: drag.x - 14,
+              top: drag.y - 14,
+              backgroundColor: 'var(--color-brand)',
+            }}
+          >
+            {drag.workout.template?.code}
+          </div>
+          <div
+            data-trash
+            className={`fixed inset-x-0 bottom-0 z-40 flex h-20 items-center justify-center border-t text-sm font-semibold transition-colors ${
+              overTrash
+                ? 'border-danger bg-danger text-white'
+                : 'border-line bg-surface text-danger'
+            }`}
+          >
+            {nb.calendar.dropToDelete}
+          </div>
+        </>
       )}
     </section>
   )
 }
 
 function DayDetail({
-  date,
   sessions,
-  onClose,
+  onOpen,
 }: {
-  date: string
   sessions: ScheduledWorkout[]
-  onClose: () => void
+  onOpen: (workoutId: string) => void
 }) {
-  const navigate = useNavigate()
-  const moveWorkout = useMoveWorkout()
-  const deleteWorkout = useDeleteWorkout()
-  const [movingId, setMovingId] = useState<string | null>(null)
-
   if (sessions.length === 0) {
-    return (
-      <div className="mt-3 rounded-xl bg-stone-50 p-3 text-sm text-stone-500">
-        {nb.calendar.noSessions}
-      </div>
-    )
+    return <div className="mt-3 rounded-xl bg-sunken p-3 text-sm text-faint">{nb.calendar.noSessions}</div>
   }
 
   return (
     <div className="mt-3 space-y-2">
-      {sessions.map((s) => (
-        <div key={s.id} className="rounded-xl bg-stone-50 p-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-semibold text-stone-900">
-                {s.template?.code} — {s.template?.name_nb}
-              </p>
-              <p className="text-xs text-stone-500">
-                {s.status === 'completed'
-                  ? nb.calendar.completedStatus
-                  : s.status === 'skipped'
-                    ? nb.calendar.skipped
-                    : nb.calendar.planned}
-              </p>
+      {sessions.map((s) => {
+        const accent = SESSION_ACCENT[s.template?.code ?? ''] ?? SESSION_ACCENT.default
+        return (
+          <div key={s.id} className="flex items-center justify-between rounded-xl bg-sunken p-3">
+            <div className="flex items-center gap-2">
+              <span
+                className={`flex h-7 w-7 items-center justify-center rounded-md text-xs font-bold text-white ${accent.bg}`}
+              >
+                {s.template?.code}
+              </span>
+              <div>
+                <p className="text-sm font-semibold text-ink">{s.template?.name_nb}</p>
+                <p className="text-xs text-faint">
+                  {s.status === 'completed'
+                    ? nb.calendar.completedStatus
+                    : s.status === 'skipped'
+                      ? nb.calendar.skipped
+                      : nb.calendar.planned}
+                </p>
+              </div>
             </div>
             <button
               type="button"
-              onClick={() => navigate(`/logger/${s.id}`)}
-              className="rounded-lg bg-stone-900 px-3 py-2 text-xs font-semibold text-white"
+              onClick={() => onOpen(s.id)}
+              className="rounded-lg bg-brand px-3 py-2 text-xs font-semibold text-white"
             >
               {nb.calendar.openLog}
             </button>
           </div>
-
-          {movingId === s.id ? (
-            <div className="mt-2 flex items-center gap-2">
-              <input
-                type="date"
-                defaultValue={date}
-                onChange={(e) => {
-                  if (!e.target.value) return
-                  moveWorkout.mutate({ workoutId: s.id, date: e.target.value })
-                  setMovingId(null)
-                  onClose()
-                }}
-                className="flex-1 rounded-lg border border-stone-300 px-2 py-1 text-sm"
-              />
-            </div>
-          ) : (
-            <div className="mt-2 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setMovingId(s.id)}
-                className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium"
-              >
-                {nb.calendar.move}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm(nb.calendar.confirmRemove)) deleteWorkout.mutate(s.id)
-                }}
-                className="rounded-lg border border-stone-300 px-3 py-1.5 text-xs font-medium text-red-600"
-              >
-                {nb.calendar.remove}
-              </button>
-            </div>
-          )}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

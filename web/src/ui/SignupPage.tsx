@@ -45,14 +45,14 @@ export function SignupPage() {
 
   return (
     <div className="mx-auto flex min-h-screen max-w-sm flex-col justify-center p-6">
-      <h1 className="text-2xl font-semibold text-stone-900">{nb.appName}</h1>
-      <h2 className="mt-2 text-base text-stone-600">{nb.auth.signupTitle}</h2>
+      <h1 className="text-2xl font-semibold text-ink">{nb.appName}</h1>
+      <h2 className="mt-2 text-base text-muted">{nb.auth.signupTitle}</h2>
 
       {awaitingConfirmation ? (
-        <p className="mt-6 text-sm text-stone-700">{nb.auth.signupAwaitingConfirmation}</p>
+        <p className="mt-6 text-sm text-muted">{nb.auth.signupAwaitingConfirmation}</p>
       ) : (
         <form onSubmit={handleSubmit} className="mt-6 space-y-3">
-          <label className="block text-sm font-medium text-stone-700" htmlFor="email">
+          <label className="block text-sm font-medium text-muted" htmlFor="email">
             {nb.auth.emailLabel}
           </label>
           <input
@@ -63,10 +63,10 @@ export function SignupPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={nb.auth.emailPlaceholder}
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-base"
+            className="w-full rounded-lg border border-line px-3 py-2 text-base"
           />
 
-          <label className="block text-sm font-medium text-stone-700" htmlFor="password">
+          <label className="block text-sm font-medium text-muted" htmlFor="password">
             {nb.auth.newPasswordLabel}
           </label>
           <input
@@ -76,10 +76,10 @@ export function SignupPage() {
             autoComplete="new-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-base"
+            className="w-full rounded-lg border border-line px-3 py-2 text-base"
           />
 
-          <label className="block text-sm font-medium text-stone-700" htmlFor="confirm-password">
+          <label className="block text-sm font-medium text-muted" htmlFor="confirm-password">
             {nb.auth.confirmPasswordLabel}
           </label>
           <input
@@ -89,23 +89,23 @@ export function SignupPage() {
             autoComplete="new-password"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full rounded-lg border border-stone-300 px-3 py-2 text-base"
+            className="w-full rounded-lg border border-line px-3 py-2 text-base"
           />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          {error && <p className="text-sm text-danger">{error}</p>}
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-stone-900 px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+            className="w-full rounded-lg bg-brand px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
           >
             {nb.auth.signupSubmit}
           </button>
         </form>
       )}
 
-      <p className="mt-6 text-sm text-stone-600">
+      <p className="mt-6 text-sm text-muted">
         {nb.auth.hasAccount}{' '}
-        <Link to="/login" className="font-medium text-stone-900 underline">
+        <Link to="/login" className="font-medium text-ink underline">
           {nb.auth.signIn}
         </Link>
       </p>
