@@ -1,208 +1,115 @@
 # Handoff
 
-Session 1, phase 0 + 1 complete. Assume the next session starts with no memory
-of this one.
+Phases 0–3 complete (docs/SESSION_PLAN.md). Assume the next session starts with
+no memory of this one.
 
-## Live right now — everything below is confirmed working end to end
+## Live and confirmed working
 
-- **App**: https://gym.syndikatet.eu (Netlify site `treningslogg-794`, id
-  `df0356d5-8db0-4957-9778-53450cc2b64b`, team "Holdet"). DNS, custom domain,
-  and TLS cert all resolved (`ssl: true`, confirmed via `curl` → `HTTP 200`).
-  CLAUDE.md and ARCHITECTURE.md both say `gym.syndikatet.eu` now — the user
-  changed it from the original `trening.syndikatet.eu`, docs were updated to
-  match.
-- **Auto-deploy is fully wired.** Push to `main` → Netlify GitHub App webhook →
-  build → deploy, confirmed by watching a real push go live without any manual
-  `netlify deploy`. Don't run `netlify deploy --prod` by hand going forward —
-  just push.
+- **App**: https://gym.syndikatet.eu — Netlify site `treningslogg-794`, id
+  `df0356d5-8db0-4957-9778-53450cc2b64b`, team "Holdet". DNS, custom domain and
+  TLS all resolved.
+- **Auto-deploy works**: push to `main` → GitHub App webhook → build → live. Do
+  not run `netlify deploy --prod` by hand.
 - **`netlify.toml`**: `base = "web"`, `command = "pnpm build"`,
-  `publish = "dist"`. Note `publish` is relative to `base` — an earlier version
-  had `publish = "web/dist"` which resolved to the nonexistent `web/web/dist`
-  and broke every cloud build silently until diagnosed from the deploy log.
-- **Database**: Supabase project "Gym", ref `kwrbykzqukaimvhlieae`, region
-  eu-west-1, Postgres 17. All 8 migrations applied, `security` advisor clean
-  (the one INFO-level finding, `integration_token` has RLS with no policies, is
-  intentional). `seed.sql` and `seed_program.sql` both run — 1 machine,
-  6 stations, 11 exercises, Blokk 1 with 3 templates / 23 items.
-- **Auth is email+password, not magic link** (changed mid-session — see below).
-  lasse.stoltenberg@gmail.com has completed first login and changed their
-  password — confirmed working by the user directly ("login works now").
-- **Multi-user is intentional, not a gap.** The user's wife will get her own
-  account. Every user-owned table was already `user_id = auth.uid()`-scoped
-  from phase 1 (CLAUDE.md rule 2's "never assume one user stays true"), so a
-  second account needs zero schema changes — it gets a fully isolated,
-  empty program automatically. `/signup` exists in the app now (self-service,
-  gated only by who has the URL — the user explicitly chose this over
-  admin-provisioned-only). Public signup was confirmed already enabled at the
-  Supabase project level (tested directly against `/auth/v1/signup`).
-  **Still needed**: turn off "Confirm email" in Supabase dashboard →
-  Authentication → Sign In / Providers → Email, or new signups will hit the
-  same built-in-SMTP rate limit that broke magic-link login. Not yet done as
-  of this session — check before assuming new signups work smoothly.
-- `web/.env` exists locally (gitignored) with the real
-  `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`. Same two vars set on Netlify
-  (`netlify env:set`, context "all").
+  `publish = "dist"`. `publish` is relative to `base` — `web/dist` there resolves
+  to `web/web/dist` and silently breaks every cloud build.
+- **Database**: Supabase project "Gym", ref `kwrbykzqukaimvhlieae`, eu-west-1.
+  Security advisor clean (the single INFO finding — `integration_token` with RLS
+  and no policies — is intentional).
+- **Auth**: email + password, self-service signup at `/signup`. Multi-user by
+  design (the user's wife will have her own account); every user table is
+  `user_id = auth.uid()`. Email confirmation is turned off, otherwise signups hit
+  Supabase's shared-SMTP rate limit.
 
-## Why auth changed from magic link to password
+## What the app does now
 
-Magic link (the original spec, ARCHITECTURE.md §2) hit two real problems
-during testing, not hypothetical ones:
-1. Supabase's built-in shared SMTP has a low, undisclosed rate limit and is
-   explicitly "not meant for production use" — the user hit "email rate
-   exceeded" from normal testing volume.
-2. Clicking the emailed link opens whatever browser/app handles mail links,
-   which is often a different origin/browser than the one that requested the
-   link — `localStorage` doesn't carry over, so it looks like login "doesn't
-   stick." This bit us for real when testing bounced between
-   `treningslogg-794.netlify.app` and `gym.syndikatet.eu` (different origins).
+**One scrolling home page**: calendar → editable programme → progress charts.
 
-Password auth removes both failure modes — no email on the login path at all
-(only needed once, for the initial account, which was done via direct SQL, not
-email). Checked first: no duplicate `auth.users`/`identities` rows — that
-wasn't the cause of anything.
+- **Calendar** shows A/B/C per day in distinct colours; green = completed.
+  Planned sessions are materialised month by month as you browse, watermarked by
+  `program.scheduled_through` so generation only fills *forward* — a session
+  deleted for travel never reappears. Move/delete is drag and drop, built on
+  pointer events (HTML5 DnD does not work on phones). Tapping anywhere in a day
+  cell selects it; a click following a real drag is suppressed.
+- **Programme editor** — add/remove exercises per session, searchable catalog of
+  34 exercises from Inspire's own chart, plus user-defined "other" exercises
+  (`exercise.user_id` non-null = private to that user).
+- **Logger** (`/logger/:workoutId`) — every exercise on one scrolling page with
+  column headers, the pin stepper showing live effective kg, autosave, and a
+  recommendation banner. No warmup column: the paper programme says warmup sets
+  are not logged. `is_warmup` remains in the schema and `v_working_set` still
+  excludes it.
+- **Carry-forward**: each exercise opens on last session's pin and reps. Carried
+  values render greyed/italic and are **not** saved until edited or confirmed
+  with the row tick — autosaving them would log sets that were never performed.
+- **Progress charts**: reps as bars (right axis), effective kg as a stepped line
+  (left axis), so double progression is visible as a sawtooth.
 
-**How the first-login password was set** (not through the client SDK — there's
-no self-service signup flow, single-user app): direct SQL using `pgcrypto`,
-matching Supabase's own bcrypt hashing:
+## Domain layer — pure, test-first, 40 tests
 
-```sql
-update auth.users
-set
-  encrypted_password = extensions.crypt(email, extensions.gen_salt('bf')),
-  raw_user_meta_data = raw_user_meta_data || '{"must_change_password": true}'::jsonb
-where email = 'lasse.stoltenberg@gmail.com';
-```
+`web/src/domain/`, no imports from `data/` or `features/` (ESLint-enforced).
 
-`src/data/auth.tsx` exposes `signIn`, `changePassword`, `mustChangePassword`
-(derived from `session.user.user_metadata.must_change_password`), and
-`signOut`. `src/ui/ProtectedRoute.tsx` redirects an authenticated-but-must-change
-user to `/change-password` from anywhere else; `src/ui/PublicOnlyRoute.tsx`
-does the reverse — redirects an already-authenticated user away from `/login`.
+- `load.ts` — `stackKg`, `effectiveKg`, `isNearStationCeiling`. Pin 15 = 74.84 kg
+  is asserted.
+- `schedule.ts` — calendar-date arithmetic that never routes through a UTC
+  instant, tested across month, year and the late-October CET/CEST change.
+- `progression.ts` — the engine. `PCT_PER_REP = 2.5` in one named place. All
+  three worked examples from CLAUDE.md §4.4 are covered, plus: RIR 0 or unknown
+  is not readiness, warmups ignored, load and sets never both move, stalling
+  after 3 flat sessions proposes ~90 %, unilateral follows the weaker side, the
+  stack top is not exceeded, station ceilings flag at 90 %.
 
-**A real bug this surfaced, now fixed**: neither the login form nor the
-change-password form navigated on success. The session/user update *did*
-happen (confirmed via `localStorage`'s `sb-<ref>-auth-token` before/after),
-but nothing told React Router to move — the page just sat there with no error
-and no visible change, indistinguishable from "broken," until a manual reload.
-Both pages now call `navigate('/', { replace: true })` explicitly on success
-instead of relying solely on context propagation from `onAuthStateChange`.
+Suggestions are proposals only — "Bruk" pre-sets the pin control and writes
+nothing.
 
-## What shipped
+## Open questions for the user — do not resolve these unilaterally
 
-**Repo scaffold** — `web/` is a Vite + React 18 + TypeScript (`strict: true`) app.
-Installed: Tailwind v4 (`@tailwindcss/vite`), TanStack Query, `vite-plugin-pwa`
-(installability + app-shell caching only — no runtime data caching, no Dexie, no
-IndexedDB), `@supabase/supabase-js`, `react-router-dom`, Vitest + Testing Library,
-Playwright, ESLint (flat config) with a `no-restricted-imports` rule that blocks
-`src/domain/**` from importing `data/`, `features/`, React, or Supabase — enforced,
-not just documented (CLAUDE.md §6). `pnpm-workspace.yaml` at repo root so
-`pnpm dev` / `test` / `typecheck` / `lint` / `build` / `e2e` all run from the root
-via `pnpm --filter web`. `packageManager: "pnpm@11.22.0"` pinned in root
-`package.json` to keep Netlify's build environment reproducible.
+1. **RIR 0 below the rep target.** The user's shoulder press was 12/9/7 at RIR 0
+   throughout. Rule 2 says "top set + 1", so the engine recommends 13 reps, which
+   is too aggressive. CLAUDE.md has no clause for "below rep_max but already at
+   failure". The user is discussing this with Claude separately —
+   see `docs/CONTEXT_PROMPT.md`. Wait for their decision.
+2. **Press arm factor.** The M2 spec says 2:1.2 → **0.6** (what's seeded).
+   Inspire's own exercise chart prints "1 to 1.2" → **1.2**. Every other station
+   agrees between the two sources; only this one differs, by a factor of two. It
+   is recorded in the station's `note` and in both spec docs. Recommend measuring
+   with a scale and setting `calibration_status = 'measured'`. Because kg is
+   computed, correcting it later recomputes all history.
+3. **First-session loads look far too light** — several exercises logged at
+   RIR 5–10. "Add one rep" may be the wrong response to a badly calibrated
+   starting load. Part of the same discussion.
 
-`typecheck`, `lint`, `test:run`, and `build` all pass right now
-(`test:run` reports zero tests — expected, `src/domain/` is test-first and
-starts in phase 3; `passWithNoTests: true` keeps that from failing the gate
-in the meantime).
+## State of the user's data
 
-**Directory structure** matches CLAUDE.md §6:
-`web/src/{domain,data,features/{logger,progress,runs,blocks,settings},ui,i18n}`.
-Only `data`, `features/settings`, `features/progress`, `ui`, and `i18n` have real
-files yet — `domain`, `features/logger`, `features/runs`, `features/blocks` are
-empty placeholders for their sessions.
+One logged session: **session C, 2026-08-23**, 21 sets across 7 exercises.
+Planned sessions run through 2026-09-30.
 
-**Auth** — see the dedicated section above.
-`src/features/progress/HomePage.tsx` is the main protected route — fetches the
-active program via TanStack Query (`src/data/queries/program.ts`) and lists its
-session templates; verified rendering Blokk 1 correctly against live data.
-`src/features/settings/SettingsPage.tsx` shows the build hash (`__BUILD_HASH__`,
-injected from `git rev-parse --short HEAD` in `vite.config.ts`, falls back to
-`'dev'` with no commits/not a repo).
+This matters for expectations: **recommendations and progress charts are
+invisible with a single session.** A recommendation needs a previous session of
+the *same template* (so the next session C, 30 August, is the first that shows
+one), and a chart needs at least two sessions for that exercise. Both were
+verified by cloning the user's real session onto a throwaway account and adding
+a second — not by assuming.
 
-**Database** — `supabase/migrations/`, one concern per file, RLS enabled in the
-same migration that creates each table (not deferred to a later "policies" file):
+## Not built
 
-```
-20260823102705_machine_station.sql        machine, station — public read
-20260823102706_exercise.sql               exercise — public read
-20260823102708_program_session_templates.sql   program, session_template,
-                                            session_template_item — user_id = auth.uid()
-20260823102709_workout_set_entry.sql       workout, set_entry — pin/external_kg
-                                            CHECK constraint, is_warmup
-20260823102711_bodyweight_run_activity.sql bodyweight_entry, run_activity
-20260823102712_integration_token.sql       RLS enabled, ZERO policies — no client
-                                            access at all, by design
-20260823102713_suggestion_feedback.sql
-20260823102715_views.sql                   v_working_set only (security_invoker)
-```
+- **Phase 4 — Strava.** `supabase/functions/` does not exist. The user has
+  explicitly said not to bother: they track running elsewhere. `run_activity`
+  and `integration_token` tables exist but are unused.
+- **Phase 6 — block review, calibration tool, CSV export.**
+- `v_exercise_progress` / `v_week_summary` views — progress is currently computed
+  client-side from `v_working_set` plus workout dates, because the view carries no
+  foreign keys for PostgREST to embed through.
+- Bodyweight tracking UI (`bodyweight_entry` exists, nothing writes to it).
 
-`v_exercise_progress` and `v_week_summary` are deliberately **not** built yet —
-they need progression/week logic that doesn't exist until phases 3 and 5.
-Building them empty now would be guessed SQL.
+## Working notes
 
-Every user-owned table carries its own `user_id` column directly (not inferred
-via a join to `program`), so every RLS policy is a flat `user_id = auth.uid()` —
-this was a judgment call reading CLAUDE.md rule 2 literally; flag it if that's
-not what was intended.
-
-**Seed data** — `supabase/seed.sql`: Inspire M2 (`plate_kg = 4.536`,
-`top_plate_kg = 6.804`, `plate_count = 15`), all 6 stations from CLAUDE.md §4.1
-at `calibration_status = 'spec'`, and the 11-exercise catalog with
-`default_station_id`. Safe to run any time — none of it is user-scoped.
-
-`supabase/seed_program.sql`: Blokk 1 (2026-08-23 → 2026-09-26), templates A/B/C
-and all 23 session_template_item rows, transcribed exactly from
-`Inspire_M2_program_og_logg_v2.pdf`. **Already run** against the real account
-(verified: 3 templates, 23 items). It looks up the user by email and is a safe
-no-op otherwise, so it's fine to leave in the repo as-is; don't re-run it
-against this project (it has no `on conflict` guard and would duplicate the
-program).
-
-Decisions made without asking further (flagged, not blocking, per the user's
-"focus on architecture and functionality" steer):
-- `session_template_item` got a `note text` column (not in CLAUDE.md §5's
-  summary DDL) to hold the PDF's per-exercise comments ("NØKKELØVELSE",
-  "Start uten ekstra vekt", etc).
-- "Nedtrekk, alternativt grep" in session B is the *same* `nedtrekk` exercise
-  row, not a separate catalog entry — the grip variant lives in that `note`.
-  Progression is already scoped per session template (CLAUDE.md §4.3), so this
-  doesn't collide with session A/C's nedtrekk.
-- "Pallof press eller kabelcrunch" in session C is two separate
-  `is_optional = true` rows with a matching note — no "choice group" construct.
-- Station picks not pinned down by the PDF or CLAUDE.md's worked examples:
-  brystpress → `press_arm`, skulderpress → `press_arm`, kabelcrunch →
-  `upper_pulley`, pallof press → `mid_pulley`, bicepscurl → `low_pulley`, tåhev →
-  no station (`load_source = 'bodyweight'`). All `calibration_status = 'spec'` —
-  a one-row UPDATE to correct.
-- Auth switched from magic link to email+password — see dedicated section
-  above. ARCHITECTURE.md updated to match (§2 diagram, §4, §6 phase table).
-
-**Design mockups** — early Logger + Dashboard layout exploration published as a
-Claude artifact (not part of the repo): `https://claude.ai/code/artifact/4a46ff86-323e-4e2b-9f1f-bab48217f141`.
-For layout iteration only, not a source of truth for the real Tailwind build.
-
-**docs/SESSION_PLAN.md** — one phase per session, phases 0–6, mapped from
-ARCHITECTURE.md §6.
-
-## What's NOT done yet
-
-1. **The user hasn't actually completed first login.** Password is
-   `must_change_password = true` with password = email, reset to that state
-   after verification testing. Next session should confirm they've signed in
-   and changed it — if `must_change_password` is still `true` a while from now,
-   check in rather than assuming it's fine.
-2. **`supabase/functions/` doesn't exist yet** — correct for this phase
-   (strava-oauth/strava-sync are phase 4).
-3. **No local Docker/Supabase.** Verification happened directly against the
-   hosted "Gym" project via the Supabase MCP tools, not `supabase db reset`
-   locally — fine for a single hosted project, but there's no fast local
-   iteration loop yet if that's ever wanted.
-
-Phase 1's "done when" is met: signing in at https://gym.syndikatet.eu shows
-Blokk 1 and all three session templates.
-
-## Exact next step
-
-Session 2: logger UI (docs/SESSION_PLAN.md) — pin/station picker, set entry,
-workout draft in `localStorage`, manual backdated entry. Point it at the
-`session_template_item` rows already seeded for Blokk 1.
+- Verify against the live database with a throwaway account, then delete it —
+  `delete from auth.users where email like 'claude-...'` cascades cleanly. Two
+  real bugs (missing `user_id` on insert failing RLS, and a PostgREST
+  `referencedTable` that must use the *select alias*, not the table name) were
+  invisible to typecheck and only surfaced by driving the running app.
+- `pnpm` is at the repo root via workspace; run `pnpm typecheck && pnpm lint &&
+  pnpm test:run && pnpm build` before every commit.
+- The service worker can serve a stale bundle. Settings shows the build hash —
+  check it against the deployed commit before believing a change didn't ship.
