@@ -67,6 +67,19 @@ export const nb = {
     lastTime: 'Sist',
     confirm: 'Bekreft sett',
   },
+  suggestion: {
+    title: 'Anbefaling',
+    apply: 'Bruk',
+    reps: 'reps',
+    // "anslagsvis", never "du klarer" — CLAUDE.md §4.4
+    estimated: 'anslagsvis',
+    basedOn: 'Basert på økten',
+    stalled: 'Stagnert — legg ned og bygg opp igjen',
+    atStackMax: 'Toppen av vektstabelen. Bytt øvelse eller variant.',
+    rangeAdvisory:
+      'Intervallet er smalt for denne posisjonen på stabelen. Vurder {min}–{max} reps.',
+    ceiling: 'Nær taket for stasjonen — svaret er en annen øvelse, ikke en plate til.',
+  },
   calendar: {
     title: 'Kalender',
     today: 'I dag',
@@ -123,5 +136,7 @@ export const nb = {
     topSet: 'Tyngste arbeidssett',
     sessions: 'økter',
     latest: 'Siste',
+    weight: 'Vekt',
+    reps: 'Reps',
   },
 } as const

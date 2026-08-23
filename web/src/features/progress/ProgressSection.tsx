@@ -1,4 +1,13 @@
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts'
 import { nb } from '../../i18n/nb'
 import { useProgress } from '../../data/queries/progress'
 import type { ExerciseProgress } from '../../data/queries/progress'
@@ -63,7 +72,10 @@ function yDomain(progress: ExerciseProgress): [number, number] {
   const values = progress.points.map((p) => p.topKg)
   const min = Math.min(...values)
   const max = Math.max(...values)
-  const pad = Math.max(1, (max - min) * 0.2)
+  // While the load is unchanged (reps still climbing inside the range) the
+  // line is flat by design — pad relative to the load itself so it sits in the
+  // middle of the chart rather than pinned against an axis.
+  const pad = Math.max(1, (max - min) * 0.2, max * 0.05)
   return [Math.max(0, min - pad), max + pad]
 }
 
@@ -93,10 +105,16 @@ function ExerciseChart({ progress }: { progress: ExerciseProgress }) {
         )}
       </div>
 
+      {/*
+        Two parameters, two encodings. Bars are reps (right axis), the line is
+        effective kg (left axis). Double progression is then literally visible:
+        bars climb while the line is flat, then the line steps up and the bars
+        drop back — one working cycle.
+      */}
       {progress.points.length > 1 && (
-        <div className="mt-2 h-24 w-full">
+        <div className="mt-2 h-32 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={progress.points} margin={{ top: 6, right: 8, bottom: 0, left: 0 }}>
+            <ComposedChart data={progress.points} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
               <XAxis
                 dataKey="date"
                 tick={{ fontSize: 10, fill: 'var(--color-faint)' }}
@@ -105,27 +123,59 @@ function ExerciseChart({ progress }: { progress: ExerciseProgress }) {
                 tickLine={false}
               />
               <YAxis
-                tick={{ fontSize: 10, fill: 'var(--color-faint)' }}
+                yAxisId="kg"
+                tick={{ fontSize: 10, fill: 'var(--color-brand)' }}
                 axisLine={false}
                 tickLine={false}
-                width={34}
+                width={30}
                 domain={yDomain(progress)}
                 tickFormatter={(v: number) => String(Math.round(v))}
               />
+              <YAxis
+                yAxisId="reps"
+                orientation="right"
+                tick={{ fontSize: 10, fill: 'var(--color-faint)' }}
+                axisLine={false}
+                tickLine={false}
+                width={24}
+                allowDecimals={false}
+                domain={[0, (max: number) => Math.ceil(max * 1.4)]}
+              />
               <Tooltip
-                formatter={(value) => [`${Number(value).toFixed(1)} kg`, nb.progress.topSet]}
+                formatter={(value, name) =>
+                  name === nb.progress.weight
+                    ? [`${Number(value).toFixed(1)} kg`, nb.progress.weight]
+                    : [`${value}`, nb.progress.reps]
+                }
                 labelStyle={{ fontSize: 12 }}
                 contentStyle={{ fontSize: 12, borderRadius: 8 }}
               />
+              <Legend
+                wrapperStyle={{ fontSize: 10 }}
+                iconSize={8}
+                verticalAlign="top"
+                height={16}
+              />
+              <Bar
+                yAxisId="reps"
+                dataKey="reps"
+                name={nb.progress.reps}
+                fill="var(--color-brand)"
+                fillOpacity={0.16}
+                radius={[2, 2, 0, 0]}
+                isAnimationActive={false}
+              />
               <Line
-                type="monotone"
+                yAxisId="kg"
+                type="stepAfter"
                 dataKey="topKg"
+                name={nb.progress.weight}
                 stroke="var(--color-brand)"
                 strokeWidth={2}
                 dot={{ r: 2.5, fill: 'var(--color-brand)' }}
                 isAnimationActive={false}
               />
-            </LineChart>
+            </ComposedChart>
           </ResponsiveContainer>
         </div>
       )}

@@ -3,18 +3,22 @@ import { nb } from '../../i18n/nb'
 import { effectiveKg, isNearStationCeiling } from '../../domain/load'
 import type { SessionTemplateItem, SetEntry, Side } from '../../data/types'
 import type { LastPerformance } from '../../data/queries/lastSets'
+import type { Suggestion } from '../../domain/progression'
 import { SetRow } from './SetRow'
+import { SuggestionBanner } from './SuggestionBanner'
 
 export function ExerciseBlock({
   item,
   workoutId,
   existingSets,
   last,
+  suggestion,
 }: {
   item: SessionTemplateItem
   workoutId: string
   existingSets: SetEntry[]
   last?: LastPerformance
+  suggestion?: Suggestion
 }) {
   const exercise = item.exercise
   const station = exercise?.station ?? undefined
@@ -61,6 +65,14 @@ export function ExerciseBlock({
                 : nb.logger.bodyweight.toLowerCase()}{' '}
             · {[...last.bySetIndex.values()].map((s) => s.reps).join('/')} reps
           </p>
+        )}
+        {suggestion && (
+          <SuggestionBanner
+            suggestion={suggestion}
+            onApply={(nextPin) => {
+              if (nextPin !== null) setPin(nextPin)
+            }}
+          />
         )}
       </header>
 

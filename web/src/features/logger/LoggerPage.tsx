@@ -5,6 +5,7 @@ import { useWorkoutById, useSetWorkoutStatus } from '../../data/queries/workout'
 import { useSessionTemplate } from '../../data/queries/sessionTemplate'
 import { useSetEntries } from '../../data/queries/setEntry'
 import { useLastSets } from '../../data/queries/lastSets'
+import { useSuggestions } from '../../data/queries/suggestions'
 import { ExerciseBlock } from './ExerciseBlock'
 
 export function LoggerPage() {
@@ -21,6 +22,11 @@ export function LoggerPage() {
     [template],
   )
   const { data: lastSets } = useLastSets(exerciseIds, workout?.date)
+  const { data: suggestions } = useSuggestions(
+    workout?.template_id,
+    template?.items ?? [],
+    workout?.date,
+  )
   // ExerciseBlock/SetRow seed their state on mount, so they must not mount
   // before the previous session's numbers are in hand — otherwise the carried
   // over pin and reps silently never appear.
@@ -70,6 +76,7 @@ export function LoggerPage() {
             workoutId={workout.id}
             existingSets={setsByExercise.get(item.exercise_id) ?? []}
             last={lastSets?.get(item.exercise_id)}
+            suggestion={suggestions?.get(item.exercise_id)}
           />
         ))}
       </div>
