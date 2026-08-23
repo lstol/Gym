@@ -25,12 +25,20 @@ of this one.
   intentional). `seed.sql` and `seed_program.sql` both run — 1 machine,
   6 stations, 11 exercises, Blokk 1 with 3 templates / 23 items.
 - **Auth is email+password, not magic link** (changed mid-session — see below).
-  lasse.stoltenberg@gmail.com is the only `auth.users` row. Password is
-  currently set to the email address itself and `must_change_password` is
-  `true` in `user_metadata`, so the next real sign-in forces a redirect to
-  `/change-password` before anything else is reachable. This was verified
-  working end-to-end against the live project, then reset back to this
-  first-login state — the user has not actually completed first login yet.
+  lasse.stoltenberg@gmail.com has completed first login and changed their
+  password — confirmed working by the user directly ("login works now").
+- **Multi-user is intentional, not a gap.** The user's wife will get her own
+  account. Every user-owned table was already `user_id = auth.uid()`-scoped
+  from phase 1 (CLAUDE.md rule 2's "never assume one user stays true"), so a
+  second account needs zero schema changes — it gets a fully isolated,
+  empty program automatically. `/signup` exists in the app now (self-service,
+  gated only by who has the URL — the user explicitly chose this over
+  admin-provisioned-only). Public signup was confirmed already enabled at the
+  Supabase project level (tested directly against `/auth/v1/signup`).
+  **Still needed**: turn off "Confirm email" in Supabase dashboard →
+  Authentication → Sign In / Providers → Email, or new signups will hit the
+  same built-in-SMTP rate limit that broke magic-link login. Not yet done as
+  of this session — check before assuming new signups work smoothly.
 - `web/.env` exists locally (gitignored) with the real
   `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY`. Same two vars set on Netlify
   (`netlify env:set`, context "all").
