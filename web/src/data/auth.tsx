@@ -5,8 +5,9 @@ import { supabase } from './supabaseClient'
 type AuthState = {
   session: Session | null
   loading: boolean
-  sendMagicLink: (email: string) => Promise<{ error: string | null }>
-  verifyCode: (email: string, token: string) => Promise<{ error: string | null }>
+  mustChangePassword: boolean
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  changePassword: (newPassword: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
 }
 
@@ -27,13 +28,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.subscription.unsubscribe()
   }, [])
 
-  async function sendMagicLink(email: string) {
-    const { error } = await supabase.auth.signInWithOtp({ email })
+  async function signIn(email: string, password: string) {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
     return { error: error?.message ?? null }
   }
 
-  async function verifyCode(email: string, token: string) {
-    const { error } = await supabase.auth.verifyOtp({ email, token, type: 'email' })
+  async function changePassword(newPassword: string) {
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      data: { must_change_password: false },
+    })
     return { error: error?.message ?? null }
   }
 
@@ -41,8 +45,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  const mustChangePassword = session?.user.user_metadata?.must_change_password === true
+
   return (
-    <AuthContext.Provider value={{ session, loading, sendMagicLink, verifyCode, signOut }}>
+    <AuthContext.Provider
+      value={{ session, loading, mustChangePassword, signIn, changePassword, signOut }}
+    >
       {children}
     </AuthContext.Provider>
   )
