@@ -11,6 +11,8 @@ type SetRowProps = {
   side: Side | null
   sideLabel?: string
   existing: SetEntry | undefined
+  /** What was done for this set index last session, if anything. */
+  suggested?: { reps: number; rir: number | null }
   pin: number | null
   externalKg: number | null
 }
@@ -25,43 +27,51 @@ export function SetRow({
   side,
   sideLabel,
   existing,
+  suggested,
   pin,
   externalKg,
 }: SetRowProps) {
   const [id] = useState(() => existing?.id ?? crypto.randomUUID())
-  const [reps, setReps] = useState(existing?.reps?.toString() ?? '')
-  const [rir, setRir] = useState(existing?.rir?.toString() ?? '')
+
+  // Already logged today wins; otherwise start from last session's numbers.
+  const [reps, setReps] = useState(
+    existing?.reps?.toString() ?? suggested?.reps?.toString() ?? '',
+  )
+  const [rir, setRir] = useState(
+    existing?.rir?.toString() ?? suggested?.rir?.toString() ?? '',
+  )
   const [saved, setSaved] = useState(!!existing)
   const saveSetEntry = useSaveSetEntry(workoutId)
 
-  // Autosave: no Save button. Debounced so a row isn't written on every
-  // keystroke, and never written while reps is still empty.
+  // Values carried over from last session are a starting point, not a record —
+  // they stay unsaved until the user edits them or taps to confirm, so sets
+  // that were never performed never end up in the log.
+  const isSuggestion = !existing && !!suggested && !saved
   const dirty = useRef(false)
 
+  function save() {
+    if (reps === '') return
+    saveSetEntry.mutate(
+      {
+        id,
+        workout_id: workoutId,
+        exercise_id: exerciseId,
+        station_id: stationId,
+        set_index: setIndex,
+        pin,
+        external_kg: externalKg,
+        reps: Number(reps),
+        rir: rir === '' ? null : Number(rir),
+        side,
+        is_warmup: false,
+      },
+      { onSuccess: () => setSaved(true) },
+    )
+  }
+
   useEffect(() => {
-    // Only write once the user has actually touched this row — mounting an
-    // already-logged set must not re-save it.
     if (!dirty.current || reps === '') return
-
-    const handle = setTimeout(() => {
-      saveSetEntry.mutate(
-        {
-          id,
-          workout_id: workoutId,
-          exercise_id: exerciseId,
-          station_id: stationId,
-          set_index: setIndex,
-          pin,
-          external_kg: externalKg,
-          reps: Number(reps),
-          rir: rir === '' ? null : Number(rir),
-          side,
-          is_warmup: false,
-        },
-        { onSuccess: () => setSaved(true) },
-      )
-    }, AUTOSAVE_DELAY_MS)
-
+    const handle = setTimeout(save, AUTOSAVE_DELAY_MS)
     return () => clearTimeout(handle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reps, rir, pin, externalKg])
@@ -72,10 +82,10 @@ export function SetRow({
     setter(value)
   }
 
-  const hasValue = reps !== ''
+  const inputTone = isSuggestion ? 'text-faint italic' : 'text-ink'
 
   return (
-    <div className="grid grid-cols-[2rem_1fr_1fr_1.75rem] items-center gap-2">
+    <div className="grid grid-cols-[2rem_1fr_1fr_2rem] items-center gap-2">
       <div className="tnum text-center text-sm font-semibold text-faint">
         {setIndex}
         {sideLabel && <span className="ml-0.5 text-[10px]">{sideLabel}</span>}
@@ -87,7 +97,7 @@ export function SetRow({
         placeholder="–"
         value={reps}
         onChange={(e) => onEdit(setReps, e.target.value)}
-        className="tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none"
+        className={`tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none ${inputTone}`}
       />
       <input
         type="text"
@@ -96,20 +106,28 @@ export function SetRow({
         placeholder="–"
         value={rir}
         onChange={(e) => onEdit(setRir, e.target.value)}
-        className="tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none"
+        className={`tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none ${inputTone}`}
       />
-      <span
-        aria-live="polite"
-        aria-label={saved ? nb.logger.saved : undefined}
-        className="text-center text-sm"
-        title={saved ? nb.logger.saved : undefined}
-      >
-        {saved && hasValue ? (
-          <span className="text-done">✓</span>
-        ) : saveSetEntry.isPending ? (
-          <span className="text-faint">…</span>
-        ) : null}
-      </span>
+
+      {saved ? (
+        <span className="text-center text-sm text-done" aria-label={nb.logger.saved}>
+          ✓
+        </span>
+      ) : isSuggestion ? (
+        <button
+          type="button"
+          onClick={save}
+          aria-label={`${nb.logger.confirm} ${setIndex}`}
+          title={nb.logger.confirm}
+          className="h-8 w-8 rounded-lg border border-brand text-sm font-bold text-brand"
+        >
+          ✓
+        </button>
+      ) : (
+        <span className="text-center text-sm text-faint">
+          {saveSetEntry.isPending ? '…' : ''}
+        </span>
+      )}
     </div>
   )
 }

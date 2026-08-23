@@ -64,6 +64,8 @@ export const nb = {
     bodyweight: 'Kroppsvekt',
     completed: 'Fullført',
     logHint: 'Fyll inn reps og RIR — lagres automatisk.',
+    lastTime: 'Sist',
+    confirm: 'Bekreft sett',
   },
   calendar: {
     title: 'Kalender',

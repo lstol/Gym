@@ -2,23 +2,28 @@ import { useState } from 'react'
 import { nb } from '../../i18n/nb'
 import { effectiveKg, isNearStationCeiling } from '../../domain/load'
 import type { SessionTemplateItem, SetEntry, Side } from '../../data/types'
+import type { LastPerformance } from '../../data/queries/lastSets'
 import { SetRow } from './SetRow'
 
 export function ExerciseBlock({
   item,
   workoutId,
   existingSets,
+  last,
 }: {
   item: SessionTemplateItem
   workoutId: string
   existingSets: SetEntry[]
+  last?: LastPerformance
 }) {
   const exercise = item.exercise
   const station = exercise?.station ?? undefined
 
-  const lastLogged = existingSets.at(-1)
-  const [pin, setPin] = useState(lastLogged?.pin ?? 1)
-  const [externalKg, setExternalKg] = useState(lastLogged?.external_kg ?? 0)
+  // Start from what's already logged today; failing that, from what was done
+  // last time this exercise came up.
+  const loggedToday = existingSets.at(-1)
+  const [pin, setPin] = useState(loggedToday?.pin ?? last?.pin ?? 1)
+  const [externalKg, setExternalKg] = useState(loggedToday?.external_kg ?? last?.externalKg ?? 0)
   const [extraSets, setExtraSets] = useState(0)
 
   if (!exercise) return null
@@ -46,6 +51,17 @@ export function ExerciseBlock({
           {item.rir_min}–{item.rir_max} RIR · {item.rest_sec}s
         </p>
         {item.note && <p className="mt-0.5 text-xs italic text-faint">{item.note}</p>}
+        {last && (
+          <p className="mt-1 text-xs text-brand">
+            {nb.logger.lastTime} {last.date}:{' '}
+            {last.pin !== null
+              ? `${nb.logger.pin.toLowerCase()} ${last.pin}`
+              : last.externalKg
+                ? `${last.externalKg} kg`
+                : nb.logger.bodyweight.toLowerCase()}{' '}
+            · {[...last.bySetIndex.values()].map((s) => s.reps).join('/')} reps
+          </p>
+        )}
       </header>
 
       {exercise.load_source === 'stack' && (
@@ -110,7 +126,7 @@ export function ExerciseBlock({
       )}
 
       <div className="mt-3">
-        <div className="grid grid-cols-[2rem_1fr_1fr_1.75rem] items-end gap-2 px-1 pb-1">
+        <div className="grid grid-cols-[2rem_1fr_1fr_2rem] items-end gap-2 px-1 pb-1">
           <span className="text-center text-[10px] font-semibold uppercase tracking-wide text-faint">
             {nb.logger.setNumber}
           </span>
@@ -135,6 +151,7 @@ export function ExerciseBlock({
                 side={side}
                 sideLabel={side ?? undefined}
                 existing={existingSets.find((s) => s.set_index === setIndex && s.side === side)}
+                suggested={last?.bySetIndex.get(setIndex)}
                 pin={exercise.load_source === 'stack' ? pin : null}
                 externalKg={exercise.load_source === 'external' ? externalKg : null}
               />

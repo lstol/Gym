@@ -4,6 +4,7 @@ import { nb } from '../../i18n/nb'
 import { useWorkoutById, useSetWorkoutStatus } from '../../data/queries/workout'
 import { useSessionTemplate } from '../../data/queries/sessionTemplate'
 import { useSetEntries } from '../../data/queries/setEntry'
+import { useLastSets } from '../../data/queries/lastSets'
 import { ExerciseBlock } from './ExerciseBlock'
 
 export function LoggerPage() {
@@ -15,6 +16,16 @@ export function LoggerPage() {
   const { data: setEntries } = useSetEntries(workoutId)
   const setWorkoutStatus = useSetWorkoutStatus()
 
+  const exerciseIds = useMemo(
+    () => (template?.items ?? []).map((i) => i.exercise_id),
+    [template],
+  )
+  const { data: lastSets } = useLastSets(exerciseIds, workout?.date)
+  // ExerciseBlock/SetRow seed their state on mount, so they must not mount
+  // before the previous session's numbers are in hand — otherwise the carried
+  // over pin and reps silently never appear.
+  const lastSetsReady = exerciseIds.length === 0 || lastSets !== undefined
+
   const setsByExercise = useMemo(() => {
     const map = new Map<string, typeof setEntries>()
     for (const s of setEntries ?? []) {
@@ -24,7 +35,7 @@ export function LoggerPage() {
     return map
   }, [setEntries])
 
-  if (workoutLoading || templateLoading || !workout || !template) {
+  if (workoutLoading || templateLoading || !workout || !template || !lastSetsReady) {
     return <div className="p-6 text-sm text-muted">{nb.logger.loading}</div>
   }
 
@@ -58,6 +69,7 @@ export function LoggerPage() {
             item={item}
             workoutId={workout.id}
             existingSets={setsByExercise.get(item.exercise_id) ?? []}
+            last={lastSets?.get(item.exercise_id)}
           />
         ))}
       </div>
