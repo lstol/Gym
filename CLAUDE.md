@@ -110,13 +110,26 @@ Station factors, manufacturer spec (sourcing and caveats in `docs/ARCHITECTURE.m
 | `press_arm` | 2:1.2 | ~0.6 | 2.72 kg | 44.9 kg |
 | `leg_extension` | 1:1 | 1.0 | 4.54 kg | 74.8 kg |
 | `leg_curl` | 4:3 | 0.75 | 3.40 kg | 56.1 kg |
+| `leg_press` (tilleggsutstyr) | 1:2 | 2.0 | 9.07 kg | 149.7 kg |
+
+Ratios are written **stack:resistance**, so factor = right ÷ left.
 
 The per-station ceiling matters: an exercise approaching its station maximum needs an exercise
 change, not a load change. Surface it in the UI at 90 % of max.
 
-**These factors are uncertain.** Dealer listings publish the same station as both "2:1" and
-"1:2", and "2:1.2" is ambiguous under any reading. They are therefore stored as *machine
-configuration with a calibration status*, never as constants in code.
+**Five of the six are now cross-confirmed; one is not.** The manufacturer's M2 ratio list and
+Inspire's own published exercise chart agree on upper pulley, mid, low, leg extension and leg
+curl. They disagree on exactly one station: the **press arm**. The M2 list gives `2:1.2` →
+**0.6**; the exercise chart prints "Weight Ratio 1 to 1.2" → **1.2**. That is a factor of two,
+and no source is a measurement.
+
+The seeded value is 0.6, following the M2 list. **Measure the press arm before trusting any
+number derived from it** — hang a scale on it at a known pin and set `calibration_status =
+'measured'`. Because kg is computed and never stored, correcting the factor afterwards
+recomputes all history correctly.
+
+Factors are therefore stored as *machine configuration with a calibration status*, never as
+constants in code.
 
 The rule that follows:
 

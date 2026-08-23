@@ -91,10 +91,15 @@ Like viktig er **taket per stasjon**: lavpulleyen stopper på 37,4 kg effektivt,
 løpet av en blokk eller to. Modellen må derfor kjenne `max_effective_kg` per stasjon og si fra
 ved 90 %, fordi svaret da er en annen øvelse, ikke en plate til.
 
-**Problemet med disse tallene:** notasjonen er inkonsistent på tvers av kilder. Samme stasjon
-publiseres som «2:1» hos én forhandler og «1:2» hos en annen — fysisk samme sak, motsatt
-konvensjon. «Press arm 2:1.2» er tvetydig uansett hvordan man leser den. Ingen av kildene er
-et måleresultat; alle er avskrift av samme datablad.
+**Problemet med disse tallene — oppdatert august 2026.** Notasjonen leses nå som
+*stack:motstand*, altså faktor = høyre ÷ venstre. Under den konvensjonen er produsentens
+M2-liste entydig: mid/lav 2:1 = 0,5 · lat/øvre 1:1 = 1,0 · leg ext 1:1 = 1,0 ·
+seated leg curl 4:3 = 0,75 · beinpress 1:2 = 2,0 · pressarm 2:1.2 = 0,6.
+
+Inspires egen øvelsesplakat bekrefter fem av disse. Den ene som spriker er **pressarmen**:
+plakaten skriver «Weight Ratio 1 to 1.2» = **1,2**, altså dobbelt av M2-listens 0,6. Vi følger
+M2-listen (0,6), men dette er den ene verdien som må måles før den kan stoles på. Ingen av
+kildene er et måleresultat.
 
 **Derfor:** `set_entry` lagrer *pinnenummer og stasjon*. Effektiv vekt beregnes i en view.
 Faktoren per stasjon ligger som maskinkonfigurasjon med en `calibration_status`.
