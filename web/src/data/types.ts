@@ -41,9 +41,12 @@ export type Program = {
   id: string
   name: string
   start_date: string
-  end_date: string
+  /** Null means open-ended — a block is not a fixed number of weeks. */
+  end_date: string | null
   status: ProgramStatus
   notes: string | null
+  /** How far ahead planned sessions have been materialised. */
+  scheduled_through: string | null
 }
 
 export type SessionTemplate = {

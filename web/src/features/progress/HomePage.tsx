@@ -1,45 +1,38 @@
 import { Link } from 'react-router-dom'
 import { nb } from '../../i18n/nb'
 import { useActiveProgram } from '../../data/queries/program'
+import { CalendarSection } from '../calendar/CalendarSection'
+import { ProgramSection } from '../blocks/ProgramSection'
+import { ProgressSection } from './ProgressSection'
 
 export function HomePage() {
   const { data: program, isLoading } = useActiveProgram()
 
-  return (
-    <div className="mx-auto max-w-md p-6">
-      <h1 className="text-xl font-semibold text-stone-900">{nb.home.programTitle}</h1>
+  const currentExerciseIds = (program?.session_templates ?? []).flatMap((t) =>
+    t.items.map((i) => i.exercise_id),
+  )
 
-      {isLoading && <p className="mt-4 text-sm text-stone-500">{nb.home.loading}</p>}
+  return (
+    <div className="mx-auto max-w-md space-y-4 p-4 pb-16">
+      <header className="flex items-center justify-between px-1 pt-2">
+        <h1 className="text-xl font-semibold text-stone-900">{nb.appName}</h1>
+        <Link to="/settings" className="text-sm text-stone-500 underline">
+          {nb.nav.settings}
+        </Link>
+      </header>
+
+      {isLoading && <p className="px-1 text-sm text-stone-500">{nb.home.loading}</p>}
 
       {!isLoading && !program && (
-        <p className="mt-4 text-sm text-stone-500">{nb.home.noProgram}</p>
+        <p className="px-1 text-sm text-stone-500">{nb.program.noProgram}</p>
       )}
 
       {program && (
-        <div className="mt-4">
-          <p className="text-lg font-medium text-stone-900">{program.name}</p>
-          <ul className="mt-4 space-y-2">
-            {program.session_templates.map((t) => (
-              <li
-                key={t.id}
-                className="flex items-center justify-between rounded-lg border border-stone-200 p-3"
-              >
-                <div>
-                  <p className="font-medium">
-                    {t.code} — {t.name_nb}
-                  </p>
-                  <p className="text-sm text-stone-500">{t.items.length} øvelser</p>
-                </div>
-                <Link
-                  to={`/logger?template=${t.id}`}
-                  className="rounded-lg bg-stone-900 px-3 py-2 text-sm font-medium text-white"
-                >
-                  {nb.home.startSession}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <>
+          <CalendarSection program={program} />
+          <ProgramSection program={program} />
+          <ProgressSection currentExerciseIds={currentExerciseIds} />
+        </>
       )}
     </div>
   )

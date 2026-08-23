@@ -22,6 +22,20 @@ export function useWorkout(templateId: string | undefined, date: string) {
   })
 }
 
+async function fetchWorkoutById(workoutId: string): Promise<Workout> {
+  const { data, error } = await supabase.from('workout').select('*').eq('id', workoutId).single()
+  if (error) throw error
+  return data as Workout
+}
+
+export function useWorkoutById(workoutId: string | undefined) {
+  return useQuery({
+    queryKey: ['workout', 'id', workoutId],
+    queryFn: () => fetchWorkoutById(workoutId as string),
+    enabled: !!workoutId,
+  })
+}
+
 async function createWorkout(args: {
   programId: string
   templateId: string
