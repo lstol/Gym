@@ -1,6 +1,7 @@
 {
   "name": "treningslogg",
   "private": true,
+  "packageManager": "pnpm@11.22.0",
   "scripts": {
     "dev": "pnpm --filter web dev",
     "build": "pnpm --filter web build",
