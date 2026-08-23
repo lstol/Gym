@@ -36,6 +36,21 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
   const [hoverDate, setHoverDate] = useState<string | null>(null)
   const [overTrash, setOverTrash] = useState(false)
   const gridRef = useRef<HTMLDivElement>(null)
+  const justDragged = useRef(false)
+
+  /**
+   * The whole day cell is one tap target — hitting the date number or the
+   * session chip must behave identically. Previously a tap on the chip
+   * selected the day and the click then bubbled to the cell and deselected it
+   * again, so tapping the letter appeared to do nothing.
+   */
+  function selectDay(date: string) {
+    if (justDragged.current) {
+      justDragged.current = false
+      return
+    }
+    setSelectedDate((current) => (current === date ? null : date))
+  }
 
   const needsGeneration = !program.scheduled_through || program.scheduled_through < last
   useEffect(() => {
@@ -95,10 +110,11 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
       deleteWorkout.mutate(drag.workout.id)
     } else if (wasDragging && dropDate && dropDate !== drag.workout.date) {
       moveWorkout.mutate({ workoutId: drag.workout.id, date: dropDate })
-    } else if (!wasDragging) {
-      // A tap, not a drag — open that day.
-      setSelectedDate(drag.workout.date === selectedDate ? null : drag.workout.date)
     }
+
+    // A drag ends with a click event too. Remember so the click that follows
+    // is ignored rather than treated as a tap on the day.
+    justDragged.current = wasDragging
 
     setDrag(null)
     setHoverDate(null)
@@ -161,8 +177,8 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
             <div
               key={date}
               data-date={date}
-              onClick={() => setSelectedDate(isSelected ? null : date)}
-              className={`flex min-h-[3.25rem] cursor-pointer flex-col items-center gap-0.5 rounded-lg border p-1 transition-colors ${
+              onClick={() => selectDay(date)}
+              className={`flex min-h-[3.5rem] cursor-pointer flex-col items-center gap-0.5 rounded-lg border p-1 transition-colors ${
                 isHovered
                   ? 'border-brand bg-brand-soft'
                   : isSelected
@@ -187,7 +203,7 @@ export function CalendarSection({ program }: { program: ProgramWithTemplates }) 
                       onPointerDown={(e) => handlePointerDown(e, s)}
                       onPointerMove={handlePointerMove}
                       onPointerUp={handlePointerUp}
-                      className={`touch-none select-none rounded px-1.5 text-[10px] font-bold leading-5 ${
+                      className={`inline-flex min-w-6 touch-none select-none items-center justify-center rounded px-1.5 text-[11px] font-bold leading-6 ${
                         s.status === 'completed'
                           ? 'bg-done text-white'
                           : s.status === 'skipped'
