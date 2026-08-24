@@ -10,6 +10,18 @@
 -- småøvelser (10–15 / 12–15 reps) get 2–3 RIR. Sett rows use target_sets = the
 -- top of any printed range (e.g. splittknebøy's "2–3" → 3); a lighter day is
 -- just fewer logged set_entry rows against that target, not a schema concept.
+--
+-- HISTORICAL RECORD — do not edit the weekday values below. This script has
+-- already run; the inserts here are a faithful record of what was actually
+-- executed (A on Monday, B on Wednesday, C on Sunday), not the current spec.
+--
+-- 2026-08-23: the live schedule was corrected afterward via a direct UPDATE —
+-- A moved Monday(1) → Tuesday(2), B moved Wednesday(3) → Thursday(4), C
+-- unchanged on Sunday(7). Reason: Sunday(C) was immediately followed by
+-- Monday(A), two strength sessions back to back with no rest/run day between.
+-- The corrected pattern is C(Sun) → A(Tue) → B(Thu), each separated by at
+-- least one non-strength day. If you ever seed a fresh program from this file
+-- as a template, use weekday 2/4/7, not the 1/3/7 written below.
 
 do $$
 declare
