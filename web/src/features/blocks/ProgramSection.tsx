@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { nb } from '../../i18n/nb'
 import type { ProgramWithTemplates } from '../../data/types'
 import { useAddTemplateItem, useRemoveTemplateItem } from '../../data/queries/exercise'
+import { useUpdateTemplateWeekday } from '../../data/queries/sessionTemplate'
 import { ExercisePicker } from './ExercisePicker'
 import { SESSION_ACCENT } from '../calendar/sessionAccent'
 
@@ -10,6 +11,7 @@ export function ProgramSection({ program }: { program: ProgramWithTemplates }) {
   const [pickerFor, setPickerFor] = useState<string | null>(null)
   const addItem = useAddTemplateItem()
   const removeItem = useRemoveTemplateItem()
+  const updateWeekday = useUpdateTemplateWeekday()
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 shadow-sm">
@@ -45,13 +47,39 @@ export function ProgramSection({ program }: { program: ProgramWithTemplates }) {
 
             return (
               <div key={t.id} className="rounded-xl bg-sunken p-3">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold text-white ${accent.bg}`}
-                  >
-                    {t.code}
-                  </span>
-                  <p className="text-sm font-semibold text-ink">{t.name_nb}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span
+                      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-xs font-bold text-white ${accent.bg}`}
+                    >
+                      {t.code}
+                    </span>
+                    <p className="truncate text-sm font-semibold text-ink">{t.name_nb}</p>
+                  </div>
+                  {editing ? (
+                    <select
+                      aria-label={nb.program.weekday}
+                      value={t.weekday}
+                      onChange={(e) =>
+                        updateWeekday.mutate({
+                          templateId: t.id,
+                          oldWeekday: t.weekday,
+                          newWeekday: Number(e.target.value),
+                        })
+                      }
+                      className="shrink-0 rounded-lg border border-line bg-surface px-2 py-1 text-xs text-ink"
+                    >
+                      {nb.program.weekdayNames.map((name, i) => (
+                        <option key={name} value={i + 1}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="shrink-0 text-xs text-faint">
+                      {nb.program.weekdayNames[t.weekday - 1]}
+                    </span>
+                  )}
                 </div>
 
                 <ul className="mt-2 divide-y divide-line">

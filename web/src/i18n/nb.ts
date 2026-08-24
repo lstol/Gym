@@ -145,6 +145,16 @@ export const nb = {
     createAndAdd: 'Opprett og legg til',
     cancel: 'Avbryt',
     back: 'Tilbake',
+    weekday: 'Ukedag',
+    weekdayNames: [
+      'mandag',
+      'tirsdag',
+      'onsdag',
+      'torsdag',
+      'fredag',
+      'lørdag',
+      'søndag',
+    ],
   },
   progress: {
     title: 'Progresjon',
