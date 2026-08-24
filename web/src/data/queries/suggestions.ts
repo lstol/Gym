@@ -19,15 +19,19 @@ type Row = {
 }
 
 /**
- * History for the progression engine, scoped to the SAME session template —
- * session B's nedtrekk must not drive session A's.
+ * History for the progression engine, across every session template the
+ * exercise appears in — rep_min/rep_max are the same wherever an exercise
+ * appears (PROGRESSION_V2.md §5), so yesterday's nedtrekk under session C is
+ * valid signal for today's nedtrekk under session A. Siloing by template was
+ * tried first and reverted 2026-08-24: with most exercises shared across
+ * A/B/C and each template recurring only weekly, per-template history meant
+ * calibration effectively never converged.
  *
  * Skipped sessions are excluded. Anything else with logged sets counts as
  * performed: requiring status = 'completed' would silently drop a session where
  * the sets were logged but "Avslutt økt" was never tapped.
  */
 async function fetchHistory(
-  templateId: string,
   exerciseIds: string[],
   beforeDate: string,
 ): Promise<Map<string, SessionPerformance[]>> {
@@ -36,10 +40,9 @@ async function fetchHistory(
   const { data, error } = await supabase
     .from('set_entry')
     .select(
-      'exercise_id, set_index, pin, external_kg, reps, rir, side, is_warmup, is_amrap, workout:workout_id!inner(date, status, template_id)',
+      'exercise_id, set_index, pin, external_kg, reps, rir, side, is_warmup, is_amrap, workout:workout_id!inner(date, status)',
     )
     .in('exercise_id', exerciseIds)
-    .eq('workout.template_id', templateId)
     .neq('workout.status', 'skipped')
     .lt('workout.date', beforeDate)
     .order('set_index', { ascending: true })
@@ -106,7 +109,7 @@ export function useSuggestions(
     enabled: !!templateId && !!beforeDate && exerciseIds.length > 0,
     queryFn: async (): Promise<Map<string, Suggestion>> => {
       const [history, epleyKs] = await Promise.all([
-        fetchHistory(templateId as string, exerciseIds, beforeDate as string),
+        fetchHistory(exerciseIds, beforeDate as string),
         fetchEpleyK(exerciseIds),
       ])
 

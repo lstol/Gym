@@ -82,19 +82,58 @@ The three questions that used to sit here are answered, and the answers are impl
 The press arm factor is **settled at 0.6** (owner-confirmed 2026-08-23; the conflicting
 1.2 comes from Inspire's M3 chart, which does not apply to this machine).
 
+### History now spans every session template, 2026-08-24
+
+Suggestion history and `rep_cost_observation` used to be scoped to one specific
+`session_template` row. The user's first-ever session under template A showed
+**no suggestion banner for any exercise**, despite five of A's six exercises
+having been logged the day before under C — because rule 0 (`no_history`)
+matched for every one of them. Fixed by dropping the template filter from both
+`queries/suggestions.ts` and `queries/repCostObservation.ts`: history is now
+every logged session containing the exercise, any template, since
+`rep_min`/`rep_max` are the same wherever an exercise appears
+(`PROGRESSION_V2.md` §5) — a template only changes the RIR target. Migration
+`20260824094135_history_across_templates.sql` moved `rep_cost_observation`'s
+unique key from `(user, exercise, template, observed_at)` to `(user, exercise,
+observed_at)`, since the same pin-change observation must stay one row
+regardless of which template's "Avslutt økt" triggers the recompute that finds
+it. `PROGRESSION_V2.md` §1–§3 and CLAUDE.md §4.3 updated to match.
+
+### Station corrections, 2026-08-24
+
+Two exercises were mapped to the wrong station when the catalog was built from
+a generic web search rather than the physical unit — the owner corrected both
+by hand:
+
+- **Sittende roing** (seated row): was `low_pulley`, is actually `press_arm`.
+- **Kabelcrunch** (cable crunch): was `upper_pulley`, is actually `mid_pulley`.
+
+`exercise.default_station_id` and the `set_entry.station_id` on the one
+already-logged session (2026-08-23) were both corrected directly in the
+database — kg is computed, never stored, so history recomputes correctly.
+`PROGRESSION_V2.md` §5 and its §7 worked examples carry a note explaining the
+correction. **The rest of the 34-exercise catalog has not been independently
+verified against the physical machine** — only these two were caught, because
+the owner happened to log them. Worth a full pass with the owner at some point
+rather than assuming the rest are right.
+
 ## State of the user's data
 
 One logged session: **session C, 2026-08-23**, 21 sets across 7 exercises.
-Planned sessions run through 2026-09-30. Rep ranges were reseeded by the
+Planned sessions run through 2026-10-01. The weekday schedule was corrected
+2026-08-24 — A now runs Tuesday, B Thursday, C unchanged on Sunday (was
+Monday/Wednesday/Sunday, which put two strength sessions back to back) — and a
+per-template weekday editor now exists in the program section so this doesn't
+need a direct SQL fix next time. Rep ranges were reseeded by the
 progression-v2 migration, so the ranges on that session's template now differ
 from what was in force when it was logged.
 
-This matters for expectations: **recommendations and progress charts are
-invisible with a single session.** A recommendation needs a previous session of
-the *same template* (so the next session C, 30 August, is the first that shows
-one), and a chart needs at least two sessions for that exercise. Both were
-verified by cloning the user's real session onto a throwaway account and adding
-a second — not by assuming.
+This matters for expectations: **recommendations need at least one previous
+logged session of the exercise (any template)**, and a chart needs at least
+two. Verified against the real production data (nedtrekk pin 7, 12 reps, RIR 6
+under C on 2026-08-23) by cloning an equivalent setup onto a throwaway account
+and confirming the next session under a *different* template now shows a
+calibration banner instead of nothing — not by assuming.
 
 ## Not built
 

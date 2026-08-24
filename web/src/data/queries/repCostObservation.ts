@@ -12,29 +12,39 @@ type Row = {
   rir: number | null
   is_warmup: boolean
   is_amrap: boolean
-  workout: { date: string; status: string } | null
+  workout: { date: string; status: string; template_id: string } | null
 }
 
+/**
+ * History across every session template the exercise appears in — see the
+ * comment on `fetchHistory` in `queries/suggestions.ts` for why. Also
+ * returns, per exercise, which template each session's date belongs to: a
+ * pin-change observation is tagged with the template of its "to" session for
+ * provenance, not with whichever template happens to trigger the recompute.
+ */
 async function fetchAllHistory(
-  templateId: string,
   exerciseIds: string[],
-): Promise<Map<string, SessionPerformance[]>> {
+): Promise<{
+  history: Map<string, SessionPerformance[]>
+  templateByDate: Map<string, Map<string, string>>
+}> {
   const { data, error } = await supabase
     .from('set_entry')
     .select(
       'exercise_id, set_index, pin, reps, rir, is_warmup, is_amrap, workout:workout_id!inner(date, status, template_id)',
     )
     .in('exercise_id', exerciseIds)
-    .eq('workout.template_id', templateId)
     .neq('workout.status', 'skipped')
     .order('set_index', { ascending: true })
 
   if (error) throw error
 
   const byExercise = new Map<string, Map<string, SessionPerformance>>()
+  const templateByDate = new Map<string, Map<string, string>>()
   for (const row of (data ?? []) as unknown as Row[]) {
     const date = row.workout?.date
-    if (!date) continue
+    const templateId = row.workout?.template_id
+    if (!date || !templateId) continue
     if (!byExercise.has(row.exercise_id)) byExercise.set(row.exercise_id, new Map())
     const sessions = byExercise.get(row.exercise_id) as Map<string, SessionPerformance>
     if (!sessions.has(date)) sessions.set(date, { date, sets: [] })
@@ -48,19 +58,23 @@ async function fetchAllHistory(
       isWarmup: row.is_warmup,
       isAmrap: row.is_amrap,
     })
+
+    if (!templateByDate.has(row.exercise_id)) templateByDate.set(row.exercise_id, new Map())
+    templateByDate.get(row.exercise_id)?.set(date, templateId)
   }
 
-  const out = new Map<string, SessionPerformance[]>()
+  const history = new Map<string, SessionPerformance[]>()
   for (const [id, sessions] of byExercise) {
-    out.set(id, [...sessions.values()].sort((a, b) => (a.date < b.date ? -1 : 1)))
+    history.set(id, [...sessions.values()].sort((a, b) => (a.date < b.date ? -1 : 1)))
   }
-  return out
+  return { history, templateByDate }
 }
 
 /**
- * Recompute this template's rep-cost observations. Idempotent: the table has a
- * unique key on (user, exercise, template, observed_at), so re-running after
- * every session simply re-asserts what is already known.
+ * Recompute rep-cost observations for these exercises. Idempotent: the table
+ * has a unique key on (user, exercise, observed_at) — not template, since the
+ * same pin-change observation must stay one row no matter which template's
+ * "Avslutt økt" triggers the recompute that finds it.
  */
 async function recordObservations(args: {
   templateId: string
@@ -70,14 +84,15 @@ async function recordObservations(args: {
   if (exerciseIds.length === 0) return 0
 
   const userId = await getCurrentUserId()
-  const history = await fetchAllHistory(args.templateId, exerciseIds)
+  const { history, templateByDate } = await fetchAllHistory(exerciseIds)
 
   const rows = args.items.flatMap((item) => {
     const factor = item.exercise?.station?.factor ?? null
+    const datesToTemplate = templateByDate.get(item.exercise_id)
     return observationsFrom(history.get(item.exercise_id) ?? [], factor).map((o) => ({
       user_id: userId,
       exercise_id: item.exercise_id,
-      session_template_id: args.templateId,
+      session_template_id: datesToTemplate?.get(o.observedAt) ?? args.templateId,
       observed_at: o.observedAt,
       from_kg: o.fromKg,
       to_kg: o.toKg,
@@ -91,7 +106,7 @@ async function recordObservations(args: {
 
   const { error } = await supabase
     .from('rep_cost_observation')
-    .upsert(rows, { onConflict: 'user_id,exercise_id,session_template_id,observed_at' })
+    .upsert(rows, { onConflict: 'user_id,exercise_id,observed_at' })
   if (error) throw error
   return rows.length
 }

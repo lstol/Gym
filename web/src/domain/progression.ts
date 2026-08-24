@@ -45,7 +45,7 @@ export type SessionPerformance = {
 }
 
 export type ProgressionInput = {
-  /** Sessions of the SAME session template, ascending by date. */
+  /** Sessions containing this exercise, any session template, ascending by date. */
   history: SessionPerformance[]
   repMin: number
   repMax: number

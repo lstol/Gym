@@ -84,7 +84,7 @@ describe('Epley model — §4', () => {
   })
 
   describe('predicted reps at a new load — the three worked examples', () => {
-    it('seated row, low pulley, pin 12 → 13 at 12 reps → 9', () => {
+    it('low pulley, pin 12 → 13 at 12 reps → 9', () => {
       expect(predictedRepsAt(30.618, 12, 32.886, 30)).toBe(9)
     })
     it('lat pulldown, upper pulley, pin 6 → 7 at 12 reps → 7', () => {
@@ -187,7 +187,7 @@ describe('the real session of 23 August — §7', () => {
     expect(s.targetReps).toBe(13)
   })
 
-  it('seated row 12/12/12 at RIR 10/10/8 asks for an AMRAP — rule 5 must not pre-empt it', () => {
+  it('low pulley 12/12/12 at RIR 10/10/8 asks for an AMRAP — rule 5 must not pre-empt it', () => {
     const s = suggestNext(
       input({
         ...C,
@@ -274,7 +274,7 @@ describe('calibration — §3', () => {
     expect(s.reason).not.toBe('calibrating')
   })
 
-  it('an AMRAP of 22 on the seated row at pin 7 proposes pin 8', () => {
+  it('an AMRAP of 22 on a low pulley exercise at pin 7 proposes pin 8', () => {
     const s = suggestNext(
       input({
         rirMin: 3,

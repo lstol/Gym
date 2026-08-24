@@ -26,8 +26,12 @@ The three open questions in the old `docs/HANDOFF.md` are resolved:
 
 ## 1. Terminology
 
-For one exercise within one session template, over its logged working sets (warmups **and
-AMRAP sets** excluded — see §3a):
+For one exercise, over its logged working sets from **any session template it appears in**
+(warmups **and AMRAP sets** excluded — see §3a). History is not siloed per template: §5 fixes
+`rep_min`/`rep_max` as the same wherever an exercise appears, so a template only changes the
+RIR target, never what counts as "on track." Siloing by template was tried first and reverted
+2026-08-24 — with most exercises shared across A/B/C and each template recurring only weekly,
+per-template history meant calibration effectively never converged; see `docs/HANDOFF.md`.
 
 ```
 reps[]       reps of each completed working set, in order
@@ -54,7 +58,7 @@ Implement as an ordered list of predicates returning a tagged recommendation, no
 
 | # | Condition | Recommendation | `reason` |
 |---|---|---|---|
-| 0 | No previous session of this template containing this exercise | none | `no_history` |
+| 0 | No previous session (any template) containing this exercise | none | `no_history` |
 | 1 | Exercise is in **calibration mode** (§3) | see §3 | `calibrating` / `calibration_jump` |
 | 2 | Proposed load would exceed 90 % of `station.max_effective_kg` | hold pin, flag ceiling | `station_ceiling` |
 | 3 | `minRir == 0` **and** `topReps < rep_max` | hold pin, target = `topReps` on **all** sets | `failure_below_target` |
@@ -77,9 +81,9 @@ Rules 3 and 4 often fire together. Rule 3 wins; its wording is more specific.
 
 ## 3. Calibration mode
 
-An exercise within a template is **uncalibrated** until either:
+An exercise is **uncalibrated** until either:
 
-- three or more completed sessions of that template contain it, **or**
+- three or more completed sessions (any template) contain it, **or**
 - any logged session had `minRir <= 3`.
 
 While uncalibrated, rule 1 matches and the following applies.
@@ -168,9 +172,11 @@ constant. This programme spans 8 to 20 reps, so any single value is wrong at one
 Table `rep_cost_observation`: `exercise_id, session_template_id, observed_at, from_kg, to_kg,
 from_reps, to_reps, epley_k`.
 
-Write one row whenever consecutive sessions of the same template show a **pin change** with
-both sessions' `minRir` within ±1 of each other. Closed-form fit (the `k` at which both
-sessions imply the same e1RM):
+Write one row whenever consecutive logged sessions — any template — show a **pin change** with
+both sessions' `minRir` within ±1 of each other. `session_template_id` records which template
+was active for the later of the two sessions (provenance only, no longer part of the row's
+identity — see `docs/HANDOFF.md`, 2026-08-24). Closed-form fit (the `k` at which both sessions
+imply the same e1RM):
 
 ```
 k = (to_kg × to_reps − from_kg × from_reps) / (from_kg − to_kg)
@@ -197,13 +203,13 @@ Settings shows the value, the observation count, and whether it is still the def
 | Chest press | press_arm | 10 | 15 | 2–2 | 3–4 |
 | Shoulder press | press_arm | 10 | 15 | 2–2 | 3–4 |
 | Lat pulldown | upper_pulley | 8 | 13 | 1–2 | 3–4 |
-| Seated row | low_pulley | 8 | 12 | 1–2 | 3–4 |
+| Seated row | press_arm | 8 | 12 | 1–2 | 3–4 |
 | Hip hinge / RDL | low_pulley | 8 | 12 | 2–3 | — |
 | Bulgarian split squat | external | 8 | 12 | 2–3 | — |
 | Calf raise | low_pulley | 12 | 20 | 1–2 | — |
 | Biceps curl | low_pulley | 10 | 16 | 1–2 | 3–4 |
 | Triceps pushdown | upper_pulley | 10 | 20 | 1–2 | 3–4 |
-| Cable crunch | upper_pulley | 10 | 20 | 1–2 | 3–4 |
+| Cable crunch | mid_pulley | 10 | 20 | 1–2 | 3–4 |
 | Pallof press | mid_pulley | 10 | 12 per side | 2–3 | 3–4 |
 
 Session C is light because `rir_min = 3` holds the loads down, and because it is the session
@@ -242,6 +248,15 @@ One line, Norwegian, always with a reason.
 Ranges per §5. Session C, so `rir_min = 3`. `stackKg(pin) = 6.804 + 4.536 × pin`. `k = 30`.
 
 ### From the real session of 23 August
+
+> **Station correction, 2026-08-24.** Seated row and cable crunch were logged against the
+> wrong station — seated row runs on `press_arm` on this unit, not `low_pulley`; cable crunch
+> runs on `mid_pulley`, not `upper_pulley`. `exercise.default_station_id` and the affected
+> `set_entry.station_id` rows from this session have been corrected in the database (kg is
+> computed, never stored, so the fix recomputes correctly). The `low_pulley 7 → 19.278 kg` and
+> `upper_pulley 9 → 47.628 kg` figures below are left as originally worked — they are still
+> arithmetically valid demonstrations of the model, just no longer what seated row and cable
+> crunch actually resolve to. See §5 for the corrected station assignments.
 
 | Exercise | Station / pin | kg | Reps | RIR | rep_max | Expected |
 |---|---|---|---|---|---|---|

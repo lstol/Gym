@@ -155,8 +155,9 @@ The authoritative specification is **`docs/PROGRESSION_V2.md`**. It supersedes t
 version of this section, which read the *top* set and so told a collapsing session (12/9/7 at
 RIR 0) to add a rep. Summary of what governs now:
 
-Evaluate in order, first match wins, over the last session's working sets of the SAME session
-template (warmups **and AMRAP sets** excluded):
+Evaluate in order, first match wins, over the exercise's most recent logged session — **any
+session template**, not just the one currently open, since rep ranges are the same wherever an
+exercise appears (§4.3, `docs/PROGRESSION_V2.md` §5) — excluding warmups **and AMRAP sets**:
 
 ```
 0  no previous session                                   → no_history
@@ -211,7 +212,7 @@ would mean never progressing. Always show the predicted reps so 14 becoming 6 is
 surprise. The UI says "anslagsvis", never "du klarer".
 
 Worked examples the tests must cover (`stackKg(pin) = 6.804 + 4.536 * pin`, k = 30):
-- Seated row, `low_pulley`, pin 12 → 13: e1RM 42.865 → **9 reps**.
+- Low pulley station, pin 12 → 13, 12 reps: e1RM 42.865 → **9 reps**.
 - Lat pulldown, `upper_pulley`, pin 6 → 7: e1RM 47.628 → **7 reps**.
 - Triceps pushdown, `upper_pulley`, pin 2 → 3 at 14 reps: e1RM 23.285 → **4 reps**.
 
