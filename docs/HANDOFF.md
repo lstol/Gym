@@ -45,7 +45,7 @@ no memory of this one.
 - **Progress charts**: reps as bars (right axis), effective kg as a stepped line
   (left axis), so double progression is visible as a sawtooth.
 
-## Domain layer — pure, test-first, 68 tests
+## Domain layer — pure, test-first, 69 tests
 
 `web/src/domain/`, no imports from `data/` or `features/` (ESLint-enforced).
 
@@ -145,6 +145,29 @@ onto `false` forever. `LoggerPage` now also waits on a `suggestionsReady`
 flag, same pattern as `lastSetsReady`. Verified end-to-end (calibration banner
 → AMRAP-mode-by-default on the last set → typing only a rep count saves
 `is_amrap = true, rir = 0`) on a throwaway account.
+
+### An AMRAP-only session hid its own calibration jump, 2026-08-26
+
+Because the sittende-roing AMRAP defaulted on (previous fix) but its two
+ordinary sets that day were never logged, that session's only set *was* the
+AMRAP. `suggestNext`'s very first guard — `sets = ruleSets(last); if
+(sets.length === 0) return blank('no_history')` — excludes AMRAPs from
+`ruleSets`, so an AMRAP-only session looked like an *empty* session and bailed
+out to `no_history` (`SuggestionBanner` renders nothing for that reason)
+before ever reaching the calibration path that would have read the AMRAP.
+Real measurement, silently discarded. Fixed in `progression.ts`: when
+`ruleSets(last)` is empty, `suggestNext` now checks for an AMRAP set directly
+and, if present, derives `currentPin`/`currentKg` from it and routes straight
+into `calibrate()` instead of giving up — added as a 69th domain test.
+Verified against sittende-roing's actual production shape (pin 7, one AMRAP
+set, 24 reps) on a throwaway account: now correctly proposes pin 9.
+
+Also corrected the `failure_below_target` banner text (both `nb.ts` and
+PROGRESSION_V2.md §6): it read "du gikk til utmattelse **på alle sett**", but
+rule 3 only requires the *worst* set to hit RIR 0 — a real brystpress session
+with RIR 2/1/0 across three sets triggered it while two of the three sets were
+nowhere near failure. The claim was simply false; wording no longer claims
+more than the rule checks.
 
 ## State of the user's data
 

@@ -87,8 +87,11 @@ export const nb = {
     // "anslagsvis", never "du klarer" — CLAUDE.md §4.4
     progressLoad: 'Opp til pinne {pin} ({kg} kg). Anslagsvis {predictedReps} reps.',
     progressReps: 'Samme pinne. Mål: {reps} reps på alle sett.',
+    // Rule 3 only requires the WORST set to hit failure (minRir == 0), not
+    // every set — the wording must not claim more than that (real report,
+    // 2026-08-26: two sets at RIR 2/1, only the third at RIR 0).
     failureBelowTarget:
-      'Samme pinne. Du gikk til utmattelse på alle sett — mål å ta {reps} på alle tre før du øker.',
+      'Samme pinne. Du gikk til utmattelse — mål å ta {reps} på alle tre før du øker.',
     raggedSets: 'Ujevne sett ({reps}). Samme pinne til alle tre er like.',
     consolidate: 'Samme pinne — siste sett gikk til utmattelse.',
     stalled: 'Stått stille i {n} økter. Ned til pinne {pin} og bygg opp igjen.',

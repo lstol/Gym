@@ -240,7 +240,31 @@ export function suggestNext(inp: ProgressionInput): Suggestion {
   if (!last) return blank(inp, 'no_history')
 
   let sets = ruleSets(last)
-  if (sets.length === 0) return blank(inp, 'no_history')
+
+  // A session can consist of nothing but the requested AMRAP — e.g. the very
+  // first calibration attempt, logged with no ordinary sets alongside it (see
+  // docs/HANDOFF.md, 2026-08-26). ruleSets() excludes AMRAPs, so `sets` is
+  // empty here even though a real measurement was taken. Route straight into
+  // calibration rather than reporting no_history, which would hide it forever
+  // — there is nothing else these rules could evaluate against anyway.
+  if (sets.length === 0) {
+    const amrap = amrapSet(last)
+    const pin = amrap?.pin ?? null
+    if (!amrap || inp.loadSource !== 'stack' || pin === null || inp.stationFactor === null) {
+      return blank(inp, 'no_history')
+    }
+    const factor = inp.stationFactor
+    return calibrate(inp, {
+      last,
+      currentPin: pin,
+      currentKg: effectiveKg(pin, factor),
+      factor,
+      minRir: 0,
+      minReps: 0,
+      reps: [],
+      weakerSide: null,
+    })
+  }
 
   const weakerSide = inp.isUnilateral ? weakerSideOf(sets) : null
   if (weakerSide) sets = sets.filter((s) => s.side === weakerSide)

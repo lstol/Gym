@@ -229,7 +229,7 @@ One line, Norwegian, always with a reason.
 |---|---|
 | `progress_load` | `"Opp til pinne {pin} ({kg} kg). Anslagsvis {predictedReps} reps."` |
 | `progress_reps` | `"Samme pinne. Mål: {minReps + 1} reps på alle sett."` |
-| `failure_below_target` | `"Samme pinne. Du gikk til utmattelse på alle sett — mål å ta {topReps} på alle tre før du øker."` |
+| `failure_below_target` | `"Samme pinne. Du gikk til utmattelse — mål å ta {topReps} på alle tre før du øker."` (rule 3 only needs the *worst* set at RIR 0, not every set — corrected 2026-08-26, was overclaiming) |
 | `ragged_sets` | `"Ujevne sett ({reps.join('/')}). Samme pinne til alle tre er like."` |
 | `consolidate` | `"Samme pinne — siste sett gikk til utmattelse."` |
 | `stalled` | `"Stått stille i {n} økter. Ned til pinne {pin} og bygg opp igjen."` |

@@ -296,6 +296,26 @@ describe('calibration — §3', () => {
     expect(s.nextEffectiveKg).toBeCloseTo(21.546, 3)
   })
 
+  it('a session logging only the AMRAP, no ordinary sets, still proposes a jump', () => {
+    // Real bug, 2026-08-26: the last two sets never got logged that day, so
+    // ruleSets() (which excludes AMRAPs) saw an empty array and suggestNext
+    // bailed out to no_history — hiding the calibration jump forever even
+    // though a real AMRAP measurement was sitting right there.
+    const s = suggestNext(
+      input({
+        rirMin: 3,
+        repMin: 8,
+        repMax: 12,
+        stationFactor: LOW.factor,
+        stationMaxEffectiveKg: LOW.maxEffectiveKg,
+        history: [session('2026-08-30', 7, [{ reps: 22, isAmrap: true }])],
+      }),
+    )
+    expect(s.reason).toBe('calibration_jump')
+    expect(s.pin).toBe(8)
+    expect(s.nextEffectiveKg).toBeCloseTo(21.546, 3)
+  })
+
   it('clamps an absurd AMRAP to 25 reps before the Epley step', () => {
     const s = suggestNext(
       input({
