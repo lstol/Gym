@@ -117,6 +117,35 @@ verified against the physical machine** — only these two were caught, because
 the owner happened to log them. Worth a full pass with the owner at some point
 rather than assuming the rest are right.
 
+### AMRAP sets were being logged as ordinary sets, 2026-08-25
+
+Follow-on bug from the two above: three real calibration AMRAP sets (nedtrekk
+22, sittende roing 24, kabelcrunch 25 reps, all RIR 0) landed in the database
+with `is_amrap = false`. Cause confirmed with the owner directly: the old flow
+required noticing and tapping a small "MAX" button *before* typing the count;
+typing a high rep number with RIR 0 already reads as "went to failure" on its
+own, so the separate toggle was easy to skip entirely. Backfilled the three
+real rows to `is_amrap = true` (recomputes correctly, kg/reasons are derived).
+
+Fixed the flow so this can't recur the same way: when the engine specifically
+requests an AMRAP on a set (`SuggestionBanner`'s `requestAmrap`), `SetRow` now
+defaults that set **into** AMRAP mode on mount — reps field empty with a "Maks
+reps" placeholder, RIR replaced by an "AMRAP" badge — rather than waiting for
+an opt-in tap. The badge is now the *opt-out*: tap it to log an ordinary set
+instead, with a title/aria-label explaining that. `ExerciseBlock` also stops
+passing a carried-forward `suggested` value into that specific set, since a
+stale last-session rep count doesn't mean anything for an open-ended AMRAP.
+
+Fixing this exposed a second, pre-existing bug it depended on: `LoggerPage`
+already had a documented rule that `ExerciseBlock`/`SetRow` seed local state
+from props on mount, so mounting before `lastSets` resolves loses the
+carried-forward pin/reps — but the same gate was never extended to
+`suggestions`, so `SetRow` could mount before `offerAmrap` was known and latch
+onto `false` forever. `LoggerPage` now also waits on a `suggestionsReady`
+flag, same pattern as `lastSetsReady`. Verified end-to-end (calibration banner
+→ AMRAP-mode-by-default on the last set → typing only a rep count saves
+`is_amrap = true, rir = 0`) on a throwaway account.
+
 ## State of the user's data
 
 One logged session: **session C, 2026-08-23**, 21 sets across 7 exercises.

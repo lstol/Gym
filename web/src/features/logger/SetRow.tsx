@@ -44,7 +44,13 @@ export function SetRow({
     existing?.rir?.toString() ?? suggested?.rir?.toString() ?? '',
   )
   const [saved, setSaved] = useState(!!existing)
-  const [isAmrap, setIsAmrap] = useState(existing?.is_amrap ?? false)
+  // When the engine specifically asks for an AMRAP on this set, default it on
+  // rather than making the user notice and tap a button first — a high rep
+  // count with RIR typed as 0 already reads as "failure" on its own, so an
+  // opt-in toggle was easy to miss (confirmed 2026-08-25: three real AMRAP
+  // sets got logged as ordinary sets this way). Only a not-yet-saved row
+  // defaults on; an already-saved row keeps whatever was actually recorded.
+  const [isAmrap, setIsAmrap] = useState(existing?.is_amrap ?? offerAmrap ?? false)
   const saveSetEntry = useSaveSetEntry(workoutId)
 
   // Values carried over from last session are a starting point, not a record —
@@ -99,7 +105,7 @@ export function SetRow({
         type="text"
         inputMode="numeric"
         aria-label={`${nb.logger.reps} ${setIndex}`}
-        placeholder="–"
+        placeholder={isAmrap ? nb.logger.amrapRepsPlaceholder : '–'}
         value={reps}
         onChange={(e) => onEdit(setReps, e.target.value)}
         className={`tnum h-11 w-full min-w-0 rounded-lg border border-line bg-surface text-center text-base focus:border-brand focus:outline-none ${inputTone}`}
@@ -114,6 +120,8 @@ export function SetRow({
             setSaved(false)
             setIsAmrap(false)
           }}
+          title={nb.logger.amrapCancel}
+          aria-label={nb.logger.amrapCancel}
           className="h-11 w-full rounded-lg border border-brand bg-brand-soft text-xs font-bold text-brand-dark"
         >
           {nb.logger.amrapOn}

@@ -30,9 +30,11 @@ export function LoggerPage() {
     workout?.date,
   )
   // ExerciseBlock/SetRow seed their state on mount, so they must not mount
-  // before the previous session's numbers are in hand — otherwise the carried
-  // over pin and reps silently never appear.
+  // before the previous session's numbers — and the suggestion, which now
+  // also seeds SetRow's initial AMRAP toggle — are in hand. Otherwise the
+  // carried-over pin/reps, or the AMRAP default, silently never appear.
   const lastSetsReady = exerciseIds.length === 0 || lastSets !== undefined
+  const suggestionsReady = exerciseIds.length === 0 || suggestions !== undefined
 
   const setsByExercise = useMemo(() => {
     const map = new Map<string, typeof setEntries>()
@@ -43,7 +45,14 @@ export function LoggerPage() {
     return map
   }, [setEntries])
 
-  if (workoutLoading || templateLoading || !workout || !template || !lastSetsReady) {
+  if (
+    workoutLoading ||
+    templateLoading ||
+    !workout ||
+    !template ||
+    !lastSetsReady ||
+    !suggestionsReady
+  ) {
     return <div className="p-6 text-sm text-muted">{nb.logger.loading}</div>
   }
 

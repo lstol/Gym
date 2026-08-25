@@ -77,6 +77,8 @@ export const nb = {
     amrapMark: 'Merk som makssett (AMRAP)',
     amrapShort: 'MAX',
     amrapOn: 'AMRAP',
+    amrapCancel: 'Trykk for å logge et vanlig sett i stedet',
+    amrapRepsPlaceholder: 'Maks reps',
   },
   suggestion: {
     title: 'Anbefaling',
